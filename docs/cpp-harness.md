@@ -37,7 +37,7 @@ The browser emulator will display C++ frames while they are fresh. If the C++ st
 npm run cpp:generate
 ```
 
-The runner now sends the full WLED segment list to the native process each frame. Each segment is rendered with its own `id`, `start`, `stop`, brightness, mode, speed, intensity, palette, and color slots, matching the daisy-chained ring fixture more closely than the earlier single-segment path.
+The runner now sends the full WLED segment list to the native process each frame. Each segment is rendered with its own `id`, `start`, `stop`, brightness, mode, speed, intensity, custom effect sliders (`c1`/`c2`/`c3`), option toggles (`o1`/`o2`/`o3`), sound simulation selector (`si`), palette, and color slots, matching the daisy-chained ring fixture more closely than the earlier single-segment path.
 
 Native segment state is persistent per segment ID. `SEGENV.data`, `SEGENV.call`, and related fields are preserved across frames unless an effect requests a different allocation size, which is required for upstream modes such as Bouncing Balls and Aurora.
 

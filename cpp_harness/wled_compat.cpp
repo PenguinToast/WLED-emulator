@@ -170,6 +170,13 @@ void prepareWledFrame(EffectContext& ctx) {
   segment.mode = ctx.segment.mode;
   segment.speed = ctx.segment.speed;
   segment.intensity = ctx.segment.intensity;
+  segment.custom1 = ctx.segment.custom1;
+  segment.custom2 = ctx.segment.custom2;
+  segment.custom3 = ctx.segment.custom3;
+  segment.check1 = ctx.segment.check1;
+  segment.check2 = ctx.segment.check2;
+  segment.check3 = ctx.segment.check3;
+  segment.soundSim = ctx.segment.soundSim;
   segment.palette = ctx.segment.palette;
   std::memcpy(segment.colors, ctx.segment.colors, sizeof(segment.colors));
   strip._virtualSegmentLength = segment.virtualLength();

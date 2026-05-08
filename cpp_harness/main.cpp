@@ -56,9 +56,18 @@ int main() {
       int mode = 9;
       int speed = 128;
       int intensity = 128;
+      int custom1 = 128;
+      int custom2 = 128;
+      int custom3 = 16;
+      int check1 = 0;
+      int check2 = 0;
+      int check3 = 0;
+      int soundSim = 0;
       int palette = 0;
       int on = 1;
-      std::cin >> id >> start >> stop >> brightness >> mode >> speed >> intensity >> palette >> on;
+      std::cin >> id >> start >> stop >> brightness >> mode >> speed >> intensity
+               >> custom1 >> custom2 >> custom3 >> check1 >> check2 >> check3
+               >> soundSim >> palette >> on;
 
       ctx.segment.id = clamp8(id);
       ctx.segment.start = std::max(0, std::min<int>(start, leds.size()));
@@ -67,6 +76,13 @@ int main() {
       ctx.segment.mode = clamp8(mode);
       ctx.segment.speed = clamp8(speed);
       ctx.segment.intensity = clamp8(intensity);
+      ctx.segment.custom1 = clamp8(custom1);
+      ctx.segment.custom2 = clamp8(custom2);
+      ctx.segment.custom3 = clamp8(std::max(0, std::min(31, custom3)));
+      ctx.segment.check1 = check1 != 0;
+      ctx.segment.check2 = check2 != 0;
+      ctx.segment.check3 = check3 != 0;
+      ctx.segment.soundSim = clamp8(soundSim);
       ctx.segment.palette = clamp8(palette);
       ctx.segment.colors[0] = readColor();
       ctx.segment.colors[1] = readColor();

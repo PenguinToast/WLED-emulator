@@ -29,6 +29,8 @@ The active server exposes enough of the WLED HTTP JSON and WebSocket API for the
 - `GET|POST /api/emulator/frame`: latest native RGB frame from native or other external renderers. This endpoint remains as an HTTP fallback and inspection endpoint.
 - `GET /api/emulator/frames`: typed emulator WebSocket bus. Browser clients send `audio` messages here, the C++ runner receives them and sends compact `frame` RGB hex messages back, and the emulator UI consumes the frame messages directly.
 
+WLED segment state preserves the standard effect controls `sx`, `ix`, `c1`, `c2`, `c3`, `o1`, `o2`, `o3`, `si`, and `m12`. Native effect rendering maps `c1`/`c2`/`c3` to `SEGMENT.custom1`/`custom2`/`custom3`, so audio-reactive controls such as Freqwave's Low bin, High bin, and Pre-amp sliders carry into the C++ shim.
+
 ## State Updates
 
 The server accepts WLED-style state patches. When `seg` is an array, patches are merged into matching segment IDs. When `seg` is an object, the patch is applied to every selected segment, matching how the WLED UI commonly edits multiple segments.

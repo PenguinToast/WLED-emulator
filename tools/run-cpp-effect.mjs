@@ -146,6 +146,13 @@ function tick() {
       segment.fx ?? 9,
       segment.sx ?? 128,
       segment.ix ?? 128,
+      segment.c1 ?? 128,
+      segment.c2 ?? 128,
+      segment.c3 ?? 16,
+      segment.o1 ? 1 : 0,
+      segment.o2 ? 1 : 0,
+      segment.o3 ? 1 : 0,
+      segment.si ?? 0,
       segment.pal ?? 0,
       state.state.on && segment.on ? 1 : 0,
     );

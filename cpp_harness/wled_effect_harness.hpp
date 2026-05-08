@@ -424,6 +424,13 @@ struct SegmentData {
   uint8_t mode = 9;
   uint8_t speed = 128;
   uint8_t intensity = 128;
+  uint8_t custom1 = 128;
+  uint8_t custom2 = 128;
+  uint8_t custom3 = 16;
+  bool check1 = false;
+  bool check2 = false;
+  bool check3 = false;
+  uint8_t soundSim = 0;
   uint8_t palette = 0;
   uint32_t colors[NUM_COLORS] = {RGBW32(255, 160, 80, 0), BLACK, BLACK};
 };
