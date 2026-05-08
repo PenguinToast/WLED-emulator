@@ -16,6 +16,7 @@ export function updateAudioState(ctx, value) {
     magnitude: clamp(Number(value?.magnitude ?? 0), 0, 1),
     bins,
     source: String(value?.source || "browser"),
+    profile: String(value?.profile || ""),
     updatedAt: Date.now(),
   });
   return ctx.audio;
@@ -34,6 +35,7 @@ export function audioMessage(audio) {
     majorPeak: audio.majorPeak,
     magnitude: audio.magnitude,
     bins: audio.bins,
+    profile: audio.profile,
     updatedAt: audio.updatedAt,
   };
 }

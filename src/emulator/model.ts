@@ -20,6 +20,7 @@ export const audio = {
   mediaElementSource: null,
   outputConnected: false,
   stream: null,
+  inputKind: "none",
   timeData: new Uint8Array(2048),
   freqData: new Uint8Array(1024),
   fftAvg: new Float32Array(16),

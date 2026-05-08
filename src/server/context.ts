@@ -23,6 +23,7 @@ export function createAppContext() {
       magnitude: 0,
       bins: Array.from({ length: 16 }, () => 0),
       source: "",
+      profile: "",
       updatedAt: 0,
     },
     externalFrame: {

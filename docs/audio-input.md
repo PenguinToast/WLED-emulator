@@ -20,7 +20,7 @@ All sources feed the same analyzer, so WLED audio-reactive effects receive the s
 - major peak magnitude
 - 16 analyzer bins, shown in the emulator FFT visualizer below the LED preview
 
-The browser streams this audio state once per animation frame, typically around 60 times per second, on the same WebSocket used for native RGB frames. The 16 FFT bins are shaped to match WLED audio-reactive `fftResult` as closely as the browser analyzer allows: the emulator maps browser FFT data into WLED's 22.05 kHz, 512-sample GEQ ranges, applies WLED's pink-noise compensation table, default manual gain, rise/fall smoothing, and square-root `FFTScalingMode = 3`. The C++ runner receives those already-scaled `fftResult` values from the frame bus and only falls back to `GET /api/emulator/audio` when the WebSocket is unavailable.
+The browser streams this audio state once per animation frame, typically around 60 times per second, on the same WebSocket used for native RGB frames. The 16 FFT bins are shaped to match WLED audio-reactive `fftResult` as closely as the browser analyzer allows: the emulator maps browser FFT data into WLED's 22.05 kHz, 512-sample GEQ ranges, applies default manual gain, rise/fall smoothing, and square-root `FFTScalingMode = 3`. Microphone input keeps WLED's pink-noise compensation and higher mic-style analyzer gain. Direct digital sources, meaning File and Computer audio, skip WLED's mic pink table and use lower analyzer gain so mastered audio does not pin every `fftResult` bin at 255. The C++ runner receives those already-scaled `fftResult` values from the frame bus and only falls back to `GET /api/emulator/audio` when the WebSocket is unavailable.
 
 ## WLED FFT Shape
 
@@ -45,7 +45,7 @@ WLED's audio-reactive usermod computes a 512-sample FFT at 22.05 kHz, zeros DC, 
 | 14 | 104-165 | 4479-7106 Hz, damped by 0.88 |
 | 15 | 165-215 | 7106-9259 Hz, damped by 0.70 |
 
-The emulator preserves that fixed-band shape instead of using generic log-spaced bins. Because Web Audio exposes byte magnitudes rather than WLED's raw `arduinoFFT` magnitudes, `WLED_ANALYZER_GAIN` is the single calibration constant that maps browser magnitudes into WLED's post-processing range.
+The emulator preserves that fixed-band shape instead of using generic log-spaced bins. Because Web Audio exposes byte magnitudes rather than WLED's raw `arduinoFFT` magnitudes, analyzer gain is calibrated by source type: microphone input uses a WLED-like mic profile, while direct digital audio uses a flatter profile to avoid carrying over microphone-specific quirks into already-mastered audio.
 
 ## Browser Capture Notes
 

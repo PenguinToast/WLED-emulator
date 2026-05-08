@@ -9,7 +9,8 @@ type DisplayAudioConstraints = MediaTrackConstraints & {
 const WLED_SAMPLE_RATE = 22050;
 const WLED_FFT_SAMPLES = 512;
 const WLED_HZ_PER_BIN = WLED_SAMPLE_RATE / WLED_FFT_SAMPLES;
-const WLED_ANALYZER_GAIN = 384;
+const WLED_MIC_ANALYZER_GAIN = 384;
+const DIRECT_ANALYZER_GAIN = 64;
 const WLED_FFT_DOWNSCALE = 0.46;
 const WLED_MANUAL_GAIN = 60 / 40 + 1 / 16;
 const WLED_PINK = [
@@ -36,6 +37,7 @@ const WLED_BANDS = [
   [104, 165, 0.88],
   [165, 215, 0.7],
 ];
+const DIRECT_PINK = Array.from({ length: 16 }, () => 1);
 
 export async function startMic() {
   try {
@@ -43,6 +45,7 @@ export async function startMic() {
     disconnectAudio();
     ui.player.pause();
     audio.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    audio.inputKind = "mic";
     audio.source = audio.context.createMediaStreamSource(audio.stream);
     audio.source.connect(audio.analyser);
     ui.status.textContent = "Microphone active. WLED UI changes will drive this output.";
@@ -72,6 +75,7 @@ export async function startComputerAudio() {
       throw new Error("No shared audio track was provided. Choose a tab/window that offers audio sharing.");
     }
     audio.stream = stream;
+    audio.inputKind = "direct";
     audio.source = audio.context.createMediaStreamSource(audio.stream);
     audio.source.connect(audio.analyser);
     ui.status.textContent = "Computer audio active. Shared audio is driving WLED audio-reactive effects.";
@@ -86,6 +90,7 @@ export async function loadFile(file) {
     await ensureAudioContext();
     disconnectAudio();
     ui.player.src = URL.createObjectURL(file);
+    audio.inputKind = "direct";
     if (!audio.mediaElementSource) audio.mediaElementSource = audio.context.createMediaElementSource(ui.player);
     audio.source = audio.mediaElementSource;
     audio.source.connect(audio.analyser);
@@ -107,6 +112,7 @@ export function stopAudio() {
   audio.beat = false;
   audio.bins.fill(0);
   audio.fftAvg.fill(0);
+  audio.inputKind = "none";
   audio.majorPeak = 0;
   audio.magnitude = 0;
   sendAudioPayload();
@@ -167,6 +173,7 @@ function sendAudioPayload() {
     bpm: audio.bpm,
     majorPeak: audio.majorPeak,
     magnitude: audio.magnitude,
+    profile: audio.inputKind,
     bins: Array.from(audio.bins.slice(0, 16)),
   };
   if (model.frameWs?.readyState === WebSocket.OPEN) {
@@ -200,15 +207,18 @@ function updateWledFftBins(hzPerBin, nyquist) {
   audio.majorPeak = peakMagnitude > 0.03 ? clamp(peakFrequency, 1, 11025) : 0;
   audio.magnitude = peakMagnitude;
 
+  const directInput = audio.inputKind === "direct";
+  const analyzerGain = directInput ? DIRECT_ANALYZER_GAIN : WLED_MIC_ANALYZER_GAIN;
+  const pinkCurve = directInput ? DIRECT_PINK : WLED_PINK;
   const noiseGateOpen = audio.volume > 0.01 || peakMagnitude > 0.03;
   for (let index = 0; index < WLED_BANDS.length; index += 1) {
     const [fromBin, toBin, damping] = WLED_BANDS[index];
     let fftCalc = noiseGateOpen
-      ? averageWledBinRange(fromBin, toBin, hzPerBin) * WLED_ANALYZER_GAIN * damping
+      ? averageWledBinRange(fromBin, toBin, hzPerBin) * analyzerGain * damping
       : 0;
 
     if (noiseGateOpen) {
-      fftCalc *= WLED_PINK[index] * WLED_FFT_DOWNSCALE * WLED_MANUAL_GAIN;
+      fftCalc *= pinkCurve[index] * WLED_FFT_DOWNSCALE * WLED_MANUAL_GAIN;
       fftCalc = clamp(fftCalc, 0, 1023);
     }
 
