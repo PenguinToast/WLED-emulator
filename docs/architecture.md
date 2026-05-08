@@ -10,7 +10,7 @@ This project runs the real WLED browser UI and mobile-app protocol against a loc
 4. `src/server/websocket.ts` handles the raw WLED WebSocket connection used by the WLED UI.
 5. `src/emulator/main.ts` starts the browser-side emulator application through Vite.
 6. `src/emulator/transport.ts` watches server state over HTTP polling and WebSocket updates.
-7. `src/emulator/audio.ts` analyzes mic or audio-file input and posts normalized audio bands to the server.
+7. `src/emulator/audio.ts` analyzes mic, computer/share, or audio-file input and posts normalized audio bands to the server.
 8. `src/emulator/native-frame.ts` copies fresh native C++ RGB frames into the browser model and clears the LEDs when no fresh native frame exists.
 9. `tools/generate-upstream-fx.mjs` extracts the supported upstream native effects and writes C++ sources plus a JSON support manifest.
 10. `tools/run-cpp-effect.mjs` can compile and run the C++ harness, then stream compact RGB frames back into `/api/emulator/frames`.
@@ -37,7 +37,7 @@ This project runs the real WLED browser UI and mobile-app protocol against a loc
 - `src/emulator/model.ts`: shared mutable browser model.
 - `src/emulator/dom.ts`: typed DOM element lookup.
 - `src/emulator/transport.ts`: server fetch/poll/WebSocket integration, including the native-frame WebSocket stream and HTTP fallback polling.
-- `src/emulator/audio.ts`: Web Audio input, band analysis, beat detection, and audio posting.
+- `src/emulator/audio.ts`: Web Audio input from mic, computer/share capture, or file playback; band analysis, beat detection, and audio posting.
 - `src/emulator/native-frame.ts`: native-frame consumer for the virtual output; it does not approximate WLED effects in JavaScript.
 - `src/emulator/renderer.ts`: ring canvas and spectrum canvas painting.
 - `src/emulator/color.ts`: color math, palette interpolation, and effect helper API.

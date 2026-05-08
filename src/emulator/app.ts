@@ -1,4 +1,4 @@
-import { loadFile, postAudio, startMic, stopAudio, updateAudio } from "./audio.js";
+import { loadFile, postAudio, startComputerAudio, startMic, stopAudio, updateAudio } from "./audio.js";
 import { ui } from "./dom.js";
 import { model } from "./model.js";
 import { applyNativeFrame } from "./native-frame.js";
@@ -15,6 +15,7 @@ export async function startApp() {
 
 function bindControls() {
   ui.mic.addEventListener("click", startMic);
+  ui.computerAudio.addEventListener("click", startComputerAudio);
   ui.file.addEventListener("change", () => loadFile(ui.file.files[0]));
   ui.stop.addEventListener("click", stopAudio);
 }

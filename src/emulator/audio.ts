@@ -2,6 +2,10 @@ import { ui } from "./dom.js";
 import { audio } from "./model.js";
 import { clamp, mix } from "./color.js";
 
+type DisplayAudioConstraints = MediaTrackConstraints & {
+  suppressLocalAudioPlayback?: boolean;
+};
+
 export async function startMic() {
   try {
     await ensureAudioContext();
@@ -11,6 +15,35 @@ export async function startMic() {
     audio.source = audio.context.createMediaStreamSource(audio.stream);
     audio.source.connect(audio.analyser);
     ui.status.textContent = "Microphone active. WLED UI changes will drive this output.";
+  } catch (error) {
+    ui.status.textContent = error.message;
+  }
+}
+
+export async function startComputerAudio() {
+  try {
+    await ensureAudioContext();
+    disconnectAudio();
+    ui.player.pause();
+    const audioConstraints: DisplayAudioConstraints = {
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: false,
+      suppressLocalAudioPlayback: false,
+    };
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      video: true,
+      audio: audioConstraints,
+    });
+    for (const track of stream.getVideoTracks()) track.stop();
+    if (!stream.getAudioTracks().length) {
+      for (const track of stream.getTracks()) track.stop();
+      throw new Error("No shared audio track was provided. Choose a tab/window that offers audio sharing.");
+    }
+    audio.stream = stream;
+    audio.source = audio.context.createMediaStreamSource(audio.stream);
+    audio.source.connect(audio.analyser);
+    ui.status.textContent = "Computer audio active. Shared audio is driving WLED audio-reactive effects.";
   } catch (error) {
     ui.status.textContent = error.message;
   }

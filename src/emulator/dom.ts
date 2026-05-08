@@ -18,6 +18,7 @@ export const spectrumCtx = context2d(spectrumCanvas);
 export const ui = {
   status: element<HTMLElement>("status"),
   mic: element<HTMLButtonElement>("micButton"),
+  computerAudio: element<HTMLButtonElement>("computerAudioButton"),
   file: element<HTMLInputElement>("fileInput"),
   stop: element<HTMLButtonElement>("stopButton"),
   player: element<HTMLAudioElement>("audioPlayer"),

@@ -26,7 +26,7 @@ The host compatibility layer in `cpp_harness/wled_effect_harness.hpp` currently 
 - `color_blend()`, `color_add()`, `color_fade()`, `RGBW32()`, `CRGB`, `CHSV`
 - `random8()`, `random16()`, `sin8_t()`, `cos8_t()`, `map()`, `mapf()`, `constrain()`, `millis()`, `micros()`
 
-Audio-reactive compatibility globals are also populated from the browser audio analyzer:
+Audio-reactive compatibility globals are also populated from the browser audio analyzer. The emulator can feed that analyzer from mic input, computer/share capture, or audio-file playback:
 
 - `volumeSmth`
 - `samplePeak`
@@ -46,4 +46,3 @@ Select `EDC Custom` in the real WLED UI, run `npm run cpp:run`, and the browser 
 For real firmware, copy the `mode_edc_custom()` function body into WLED's effect source or a custom effect/usermod integration and register it with WLED's normal `addEffect(...)` path. The host-only file wrapper, includes, and fallback modes are not meant to be copied.
 
 Keep effects inside the compatibility surface above if you want local behavior to remain close to real WLED behavior. 2D matrix helpers and the full upstream FastLED/noise API are not shimmed yet.
-
