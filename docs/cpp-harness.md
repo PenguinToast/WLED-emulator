@@ -43,6 +43,8 @@ Native segment state is persistent per segment ID. `SEGENV.data`, `SEGENV.call`,
 
 The 1D shim also decodes WLED's virtual-strip pixel indexes back to local segment coordinates. Several upstream 1D effects use that encoding even when there is only one virtual strip.
 
+The math shim keeps WLED's signed 16-bit trig contract for `sin16_t()` and `cos16_t()`. Effects such as Breathe depend on negative-to-positive sine output and will hard-clip if those helpers are treated as unsigned waves.
+
 When a segment changes mode or bounds, the shim resets that segment's runtime fields and allocated data, matching WLED's expectation that a new effect starts with a clean segment environment.
 
 The runner sends process-relative uptime seconds to the native process so `millis()`/`strip.now` retain frame-level precision for physics-style effects.

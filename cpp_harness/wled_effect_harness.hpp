@@ -242,8 +242,12 @@ inline uint8_t quadwave8(uint8_t value) {
   return clamp8(x * x * 255.0f);
 }
 
-inline uint16_t sin16_t(uint16_t theta) {
-  return static_cast<uint16_t>((std::sin(theta * 2.0 * 3.141592653589793 / 65535.0) + 1.0) * 32767.5);
+inline int16_t sin16_t(uint16_t theta) {
+  return static_cast<int16_t>(std::sin(theta * 2.0 * 3.141592653589793 / 65535.0) * 32767.0);
+}
+
+inline int16_t cos16_t(uint16_t theta) {
+  return sin16_t(theta + 0x4000);
 }
 
 inline uint8_t gamma8(uint8_t value) {
