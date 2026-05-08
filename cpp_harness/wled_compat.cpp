@@ -37,6 +37,21 @@ void* audioValues[9] = {
   fftBin,
 };
 um_data_t hostAudioData{9, audioTypes, audioValues};
+
+float estimateMajorPeak(const AudioData& audio) {
+  float peak = 0.0f;
+  uint8_t peakIndex = 0;
+  for (uint8_t i = 0; i < 16; i += 1) {
+    if (audio.bins[i] > peak) {
+      peak = audio.bins[i];
+      peakIndex = i;
+    }
+  }
+  if (peak <= 0.0f) return 0.0f;
+  constexpr float minFrequency = 60.0f;
+  constexpr float maxFrequency = 11025.0f;
+  return minFrequency * std::pow(maxFrequency / minFrequency, (peakIndex + 0.5f) / 16.0f);
+}
 }
 
 uint32_t millis() {
@@ -179,6 +194,7 @@ void prepareWledFrame(EffectContext& ctx) {
   segment.soundSim = ctx.segment.soundSim;
   segment.palette = ctx.segment.palette;
   std::memcpy(segment.colors, ctx.segment.colors, sizeof(segment.colors));
+  if (modeChanged || boundsChanged) segment.fill(BLACK);
   strip._virtualSegmentLength = segment.virtualLength();
   strip.now = static_cast<uint32_t>(ctx.time * 1000.0f);
   strip.brightness = ctx.segment.brightness;
@@ -189,8 +205,7 @@ void prepareWledFrame(EffectContext& ctx) {
   volumeRaw = clamp8(ctx.audio.volume * 512.0f);
   samplePeakByte = ctx.audio.beat ? 1 : 0;
   samplePeak = samplePeakByte != 0;
-  const float weightedFrequency = ctx.audio.bass * 180.0f + ctx.audio.mid * 1200.0f + ctx.audio.treble * 5200.0f;
-  FFT_MajorPeak = std::max(1.0f, 60.0f + weightedFrequency);
+  FFT_MajorPeak = std::max(1.0f, ctx.audio.majorPeak > 0.0f ? ctx.audio.majorPeak : estimateMajorPeak(ctx.audio));
   my_magnitude = constrain((volumeSmth * 3.0f) + (ctx.audio.bass * 256.0f), 0.0f, 1024.0f);
   for (uint8_t i = 0; i < 16; i += 1) {
     const float band = i < 5 ? ctx.audio.bass : (i < 11 ? ctx.audio.mid : ctx.audio.treble);

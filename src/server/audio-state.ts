@@ -12,6 +12,7 @@ export function updateAudioState(ctx, value) {
     treble: clamp(Number(value?.treble ?? 0), 0, 1),
     beat: Boolean(value?.beat),
     bpm: clamp(Number(value?.bpm ?? 0), 0, 300),
+    majorPeak: clamp(Number(value?.majorPeak ?? 0), 0, 11025),
     bins,
     source: String(value?.source || "browser"),
     updatedAt: Date.now(),
@@ -29,6 +30,7 @@ export function audioMessage(audio) {
     treble: audio.treble,
     beat: audio.beat,
     bpm: audio.bpm,
+    majorPeak: audio.majorPeak,
     bins: audio.bins,
     updatedAt: audio.updatedAt,
   };

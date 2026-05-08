@@ -390,6 +390,7 @@ struct AudioData {
   float treble = 0.0f;
   bool beat = false;
   float bpm = 0.0f;
+  float majorPeak = 0.0f;
   std::array<float, 16> bins = {};
 };
 

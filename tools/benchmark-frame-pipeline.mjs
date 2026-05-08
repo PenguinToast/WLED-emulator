@@ -76,6 +76,7 @@ async function benchmarkRawCpp(emulatorState) {
       audio.treble ?? 0,
       audio.beat ? 1 : 0,
       audio.bpm ?? 0,
+      audio.majorPeak ?? 0,
       bins.length,
       ...bins,
     ];

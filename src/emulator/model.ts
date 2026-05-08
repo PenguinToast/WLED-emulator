@@ -31,6 +31,7 @@ export const audio = {
   beatEnergy: 0,
   lastBeatAt: 0,
   bpm: 0,
+  majorPeak: 0,
 };
 
 export function activeSegment() {

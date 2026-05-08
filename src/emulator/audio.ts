@@ -100,13 +100,32 @@ export function updateAudio() {
   audio.bass = rangeAverage(20, 180);
   audio.mid = rangeAverage(180, 2200);
   audio.treble = rangeAverage(2200, 9000);
+  const minFrequency = 60;
+  const maxFrequency = Math.min(11025, nyquist);
+  let peakMagnitude = 0;
+  let peakFrequency = 0;
+  const compensatedMagnitude = (index) => {
+    const frequency = Math.max(minFrequency, (index + 0.5) * hzPerBin);
+    const tilt = clamp((frequency / 1000) ** 0.28, 0.55, 2.2);
+    return clamp((audio.freqData[index] / 255) * tilt, 0, 1);
+  };
   for (let i = 0; i < audio.bins.length; i += 1) {
-    const start = Math.floor((i / audio.bins.length) ** 1.8 * audio.freqData.length);
-    const end = Math.max(start + 1, Math.floor(((i + 1) / audio.bins.length) ** 1.8 * audio.freqData.length));
+    const fromHz = minFrequency * (maxFrequency / minFrequency) ** (i / audio.bins.length);
+    const toHz = minFrequency * (maxFrequency / minFrequency) ** ((i + 1) / audio.bins.length);
+    const start = Math.max(1, Math.floor(fromHz / hzPerBin));
+    const end = Math.min(audio.freqData.length - 1, Math.max(start + 1, Math.ceil(toHz / hzPerBin)));
     let sum = 0;
-    for (let j = start; j < end; j += 1) sum += audio.freqData[j] / 255;
+    for (let j = start; j < end; j += 1) {
+      const magnitude = compensatedMagnitude(j);
+      sum += magnitude;
+      if (magnitude > peakMagnitude) {
+        peakMagnitude = magnitude;
+        peakFrequency = (j + 0.5) * hzPerBin;
+      }
+    }
     audio.bins[i] = sum / (end - start);
   }
+  audio.majorPeak = peakMagnitude > 0.03 ? peakFrequency : 0;
   const now = performance.now();
   audio.beatEnergy = mix(audio.beatEnergy, audio.bass + audio.volume * 0.45, 0.08);
   audio.beat = audio.bass + audio.volume * 0.45 > audio.beatEnergy * 1.55 && now - audio.lastBeatAt > 230;
@@ -137,6 +156,7 @@ function sendAudioPayload() {
     treble: audio.treble,
     beat: audio.beat,
     bpm: audio.bpm,
+    majorPeak: audio.majorPeak,
     bins: Array.from(audio.bins.slice(0, 16)),
   };
   if (model.frameWs?.readyState === WebSocket.OPEN) {

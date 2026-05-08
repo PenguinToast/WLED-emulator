@@ -77,7 +77,7 @@ The JSON effect catalog is derived from the generated native dispatch table. Uns
 
 The server consumes `upstream_fx_1d_modes.json` for this supported-mode contract. Keep that as the boundary between native generation and WLED protocol serving; server modules should not inspect generated C++ headers or source files.
 
-The host shim implements `UsermodManager::getUMData()` for `USERMOD_ID_AUDIOREACTIVE` and feeds the upstream `um_data_t` fields from emulator audio. Browser audio values arrive normalized from `0.0` to `1.0`; the shim applies a simple AGC-style square-root curve for `volumeSmth` so short ring segments still move under normal music levels.
+The host shim implements `UsermodManager::getUMData()` for `USERMOD_ID_AUDIOREACTIVE` and feeds the upstream `um_data_t` fields from emulator audio. Browser audio values arrive normalized from `0.0` to `1.0`; the shim applies a simple AGC-style square-root curve for `volumeSmth` so short ring segments still move under normal music levels. `FFT_MajorPeak` comes from the browser analyzer's compensated peak frequency, with a fallback estimate from the 16 log-spaced FFT bins.
 
 - `u_data[0]`: smoothed volume, `volumeSmth`
 - `u_data[1]`: raw volume, `volumeRaw`

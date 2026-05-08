@@ -15,6 +15,12 @@ void writeHexByte(uint8_t value) {
   static constexpr char digits[] = "0123456789abcdef";
   std::cout << digits[value >> 4] << digits[value & 0x0f];
 }
+
+void clearRange(std::vector<CRGB>& leds, int start, int stop) {
+  const int from = std::max(0, std::min<int>(start, leds.size()));
+  const int to = std::max(from, std::min<int>(stop, leds.size()));
+  for (int index = from; index < to; index += 1) leds[index] = CRGB::Black;
+}
 }
 
 int main() {
@@ -38,6 +44,7 @@ int main() {
                   >> ctx.audio.treble
                   >> beat
                   >> ctx.audio.bpm
+                  >> ctx.audio.majorPeak
                   >> binCount) {
     ctx.audio.beat = beat != 0;
     ctx.audio.bins.fill(0.0f);
@@ -46,8 +53,6 @@ int main() {
       std::cin >> value;
       if (index < int(ctx.audio.bins.size())) ctx.audio.bins[index] = std::max(0.0f, std::min(1.0f, value));
     }
-    std::fill(leds.begin(), leds.end(), CRGB::Black);
-
     for (int index = 0; index < segmentCount; index += 1) {
       int start = 0;
       int id = index;
@@ -89,6 +94,7 @@ int main() {
       ctx.segment.colors[2] = readColor();
 
       if (on && ctx.segment.start < ctx.segment.stop) render(ctx);
+      else clearRange(leds, start, stop);
     }
 
     std::cout << "F ";

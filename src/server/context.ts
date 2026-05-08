@@ -19,6 +19,7 @@ export function createAppContext() {
       treble: 0,
       beat: false,
       bpm: 0,
+      majorPeak: 0,
       bins: Array.from({ length: 16 }, () => 0),
       source: "",
       updatedAt: 0,
