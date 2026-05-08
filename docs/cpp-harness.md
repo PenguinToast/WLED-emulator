@@ -57,6 +57,8 @@ The host `fade_out()` helper follows WLED's secondary-color fade semantics rathe
 
 The host `CRGBPalette16` shim stores the same 16 RGB entries as FastLED's palette type. This matters for upstream effects that allocate palette arrays in `SEGENV.data`, blend palettes over time, or pass local palettes to `ColorFromPalette()`.
 
+`SEGPALETTE` resolves through the current native segment, so upstream effects that call `ColorFromPalette(SEGPALETTE, ...)` see the same selected host palette as effects that call `SEGMENT.color_from_palette(...)`.
+
 The runner renders frames at a fast cadence from cached emulator state. WLED state still refreshes by HTTP because it is comparatively large and low-rate; audio arrives over the `/api/emulator/frames` typed WebSocket bus as `audio` messages, with `GET /api/emulator/audio` only used when the WebSocket is unavailable.
 
 Frames include a runner stream ID and a monotonically increasing frame number. The runner streams typed `frame` messages over `/api/emulator/frames` when possible and falls back to HTTP POSTs; the server ignores stale frames within the same stream so delayed older data cannot overwrite newer LED data, while still accepting fresh frames after runner restarts.
@@ -74,6 +76,14 @@ node tools/benchmark-frame-pipeline.mjs
 ```
 
 The benchmark reports raw native-process throughput and WebSocket receive throughput separately. In the 7-ring, 133-LED fixture, raw native effect rendering should be thousands of frames per second, while the streamed emulator path should land near display cadence at roughly 60 FPS.
+
+Run the native parity guard after shim or generator changes:
+
+```sh
+npm run audit:native
+```
+
+The audit checks the high-risk native compatibility contracts: WLED runtime field widths, aligned `SEGENV.data` storage, palette shape, selected-palette routing, AudioReactive `um_data` typing, and that every exposed generated mode has a native dispatch target that is not matrix-only.
 
 ## Upstream Effect Coverage
 

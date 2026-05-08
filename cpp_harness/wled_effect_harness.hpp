@@ -194,8 +194,9 @@ struct CRGBPalette16 {
     }
   }
 };
-#define SEGPALETTE CRGBPalette16{}
 static_assert(sizeof(CRGBPalette16) == 16 * sizeof(CRGB), "CRGBPalette16 must match FastLED's 16 RGB entries");
+CRGBPalette16 currentSegmentPalette();
+#define SEGPALETTE currentSegmentPalette()
 
 inline void nblendPaletteTowardPalette(CRGBPalette16& current, const CRGBPalette16& target, uint8_t maxChanges) {
   uint8_t changes = 0;

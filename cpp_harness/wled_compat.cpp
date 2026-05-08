@@ -14,6 +14,20 @@ uint8_t maxVol = 31;
 uint8_t binNum = 8;
 
 namespace {
+const std::array<std::array<uint32_t, 5>, 7> hostPaletteStops = {{
+  {RGBW32(255,160,80,0), RGBW32(20,120,255,0), RGBW32(255,40,120,0), RGBW32(255,160,80,0), RGBW32(20,120,255,0)},
+  {RGBW32(25,120,110,0), RGBW32(84,210,164,0), RGBW32(242,193,78,0), RGBW32(229,88,88,0), RGBW32(115,95,220,0)},
+  {RGBW32(8,8,8,0), RGBW32(124,20,12,0), RGBW32(229,74,26,0), RGBW32(255,178,66,0), RGBW32(255,245,170,0)},
+  {RGBW32(8,20,46,0), RGBW32(18,92,128,0), RGBW32(37,169,190,0), RGBW32(126,224,203,0), RGBW32(236,250,228,0)},
+  {RGBW32(255,85,156,0), RGBW32(255,199,95,0), RGBW32(109,226,167,0), RGBW32(70,170,255,0), RGBW32(180,111,255,0)},
+  {RGBW32(255,0,68,0), RGBW32(255,191,0,0), RGBW32(32,255,92,0), RGBW32(0,196,255,0), RGBW32(122,64,255,0)},
+  {RGBW32(12,48,24,0), RGBW32(24,116,48,0), RGBW32(88,168,74,0), RGBW32(210,224,130,0), RGBW32(12,48,24,0)}
+}};
+
+CRGBPalette16 paletteFromStops(const std::array<uint32_t, 5>& stops) {
+  return CRGBPalette16{stops[0], stops[1], stops[2], stops[3], stops[4]};
+}
+
 um_types_t audioTypes[9] = {
   UMT_FLOAT,
   UMT_INT16,
@@ -37,6 +51,13 @@ void* audioValues[9] = {
   fftBin,
 };
 um_data_t hostAudioData{9, audioTypes, audioValues};
+}
+
+CRGBPalette16 currentSegmentPalette() {
+  if (SEGMENT.palette == 0) {
+    return CRGBPalette16{SEGMENT.colors[0], SEGMENT.colors[1], SEGMENT.colors[2], SEGMENT.colors[0]};
+  }
+  return paletteFromStops(hostPaletteStops[SEGMENT.palette % hostPaletteStops.size()]);
 }
 
 uint32_t millis() {
@@ -148,24 +169,10 @@ uint32_t HostSegment::color_wheel(uint8_t pos) const {
 }
 
 uint32_t HostSegment::color_from_palette(uint16_t index, bool mapping, bool wrap, uint8_t mcol, uint8_t pbri) const {
-  static const std::array<std::array<uint32_t, 5>, 7> palettes = {{
-    {RGBW32(255,160,80,0), RGBW32(20,120,255,0), RGBW32(255,40,120,0), RGBW32(255,160,80,0), RGBW32(20,120,255,0)},
-    {RGBW32(25,120,110,0), RGBW32(84,210,164,0), RGBW32(242,193,78,0), RGBW32(229,88,88,0), RGBW32(115,95,220,0)},
-    {RGBW32(8,8,8,0), RGBW32(124,20,12,0), RGBW32(229,74,26,0), RGBW32(255,178,66,0), RGBW32(255,245,170,0)},
-    {RGBW32(8,20,46,0), RGBW32(18,92,128,0), RGBW32(37,169,190,0), RGBW32(126,224,203,0), RGBW32(236,250,228,0)},
-    {RGBW32(255,85,156,0), RGBW32(255,199,95,0), RGBW32(109,226,167,0), RGBW32(70,170,255,0), RGBW32(180,111,255,0)},
-    {RGBW32(255,0,68,0), RGBW32(255,191,0,0), RGBW32(32,255,92,0), RGBW32(0,196,255,0), RGBW32(122,64,255,0)},
-    {RGBW32(12,48,24,0), RGBW32(24,116,48,0), RGBW32(88,168,74,0), RGBW32(210,224,130,0), RGBW32(12,48,24,0)}
-  }};
   if (palette == 0 && mcol < NUM_COLORS) return color_fade(currentColor(mcol), pbri, true);
-  const auto& selected = palettes[palette % palettes.size()];
   uint16_t pos = mapping && length() > 1 ? (index * 255U) / (length() - 1U) : index;
   if (!wrap) pos = std::min<uint16_t>(pos, 255);
-  const uint16_t scaled = (pos % 256) * selected.size();
-  const uint8_t first = (scaled >> 8) % selected.size();
-  const uint8_t second = (first + 1) % selected.size();
-  const uint8_t blend = scaled & 0xff;
-  return color_fade(color_blend(selected[first], selected[second], blend), pbri, true);
+  return toRgbw(ColorFromPalette(currentSegmentPalette(), uint8_t(pos), pbri, LINEARBLEND));
 }
 
 void prepareWledFrame(EffectContext& ctx) {

@@ -79,7 +79,7 @@ function mergeColorSlots(current, patch) {
 }
 
 export function normalizeState(state, catalog) {
-  state.bri = clampInt(state.bri, 1, 255);
+  state.bri = clampInt(state.bri, 0, 255);
   state.seg = Array.isArray(state.seg) ? state.seg : [];
   if (!state.seg.length) {
     state.seg.push({ id: 0, start: 0, stop: 150, len: 150, sel: true });

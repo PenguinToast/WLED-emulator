@@ -26,7 +26,7 @@ This project runs the real WLED browser UI and mobile-app protocol against a loc
 - `src/server/device-state.ts`: WLED state creation, patch application, normalization, and live-preview LEDs.
 - `src/server/wled-json.ts`: WLED-compatible JSON payloads.
 - `src/server/http.ts`: route table and endpoint behavior.
-- `src/server/websocket.ts`: WebSocket handshake, WLED state broadcast, and typed emulator frame/audio bus.
+- `src/server/websocket.ts`: WebSocket handshake, WLED state broadcast, and typed emulator frame/audio bus. It buffers partial frames per socket because TCP chunks are not message boundaries.
 - `src/server/palettes.ts`: emulator palette names and RGB lookup data.
 - `src/server/responses.ts`: JSON/text/static file response helpers.
 - `src/server/presets.ts`: small preset payload served at `/presets.json`.

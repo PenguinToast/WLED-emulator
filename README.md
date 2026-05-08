@@ -47,3 +47,9 @@ The runner compiles the C++ renderer, pulls WLED state and live audio from the e
 The browser emulator does not render JavaScript approximations of WLED effects. If the C++ streamer is not running, the virtual LEDs stay dark instead of showing a fake fallback.
 
 Current native renderer status: the runner generates and compiles a host-adapted upstream `FX.cpp` slice from vendored WLED `v0.15.4`, dispatching 142 official non-2D mode IDs to real upstream functions. This includes the WLED-SR 1D audio-reactive modes, backed by a host `UsermodManager::getUMData()` shim that feeds upstream `um_data_t` audio fields from the emulator. Unsupported official slots are exposed as `RSVD` so WLED mode IDs stay stable while the UI avoids matrix-only effects the native shim cannot render. A host custom mode, `EDC Custom`, is appended at ID `187` so `cpp_harness/custom_effect.cpp` can define a WLED-style `uint16_t mode_edc_custom(void)` function that is much closer to code you can carry into a real WLED build.
+
+After native shim changes, run:
+
+```sh
+npm run audit:native
+```

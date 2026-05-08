@@ -4,8 +4,10 @@ import { audioMessage, updateAudioState } from "./audio-state.js";
 import { applyStateUpdate, renderPreviewLeds } from "./device-state.js";
 import { siJson } from "./wled-json.js";
 
+const partialFrames = new WeakMap();
+
 export function handleUpgrade(req, socket, ctx) {
-  acceptWebSocket(req, socket);
+  if (!acceptWebSocket(req, socket)) return;
   ctx.sockets.add(socket);
   sendWs(socket, siJson(ctx));
   socket.on("data", (buffer) => handleWsData(socket, buffer, ctx));
@@ -14,11 +16,11 @@ export function handleUpgrade(req, socket, ctx) {
 }
 
 export function handleFrameUpgrade(req, socket, ctx) {
-  acceptWebSocket(req, socket);
+  if (!acceptWebSocket(req, socket)) return;
   ctx.frameSockets.add(socket);
   if (externalFrameLedCount(ctx.externalFrame)) sendWs(socket, frameMessage(ctx.externalFrame));
   sendWs(socket, audioMessage(ctx.audio));
-  socket.on("data", (buffer) => handleFrameData(buffer, ctx));
+  socket.on("data", (buffer) => handleFrameData(socket, buffer, ctx));
   socket.on("close", () => ctx.frameSockets.delete(socket));
   socket.on("error", () => ctx.frameSockets.delete(socket));
 }
@@ -27,7 +29,7 @@ function acceptWebSocket(req, socket) {
   const key = req.headers["sec-websocket-key"];
   if (!key) {
     socket.destroy();
-    return;
+    return false;
   }
   const accept = createHash("sha1")
     .update(`${key}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`)
@@ -40,6 +42,7 @@ function acceptWebSocket(req, socket) {
     "",
     "",
   ].join("\r\n"));
+  return true;
 }
 
 export function broadcast(ctx, value) {
@@ -89,7 +92,7 @@ function normalizeFrameHex(value) {
 }
 
 function handleWsData(socket, buffer, ctx) {
-  const messages = decodeWs(buffer);
+  const messages = decodeWs(socket, buffer);
   for (const message of messages) {
     if (!message) continue;
     let data;
@@ -109,8 +112,8 @@ function handleWsData(socket, buffer, ctx) {
   }
 }
 
-function handleFrameData(buffer, ctx) {
-  const messages = decodeWs(buffer);
+function handleFrameData(socket, buffer, ctx) {
+  const messages = decodeWs(socket, buffer);
   for (const message of messages) {
     try {
       const data = JSON.parse(message);
@@ -126,36 +129,50 @@ function handleFrameData(buffer, ctx) {
   }
 }
 
-function decodeWs(buffer) {
+function decodeWs(socket, chunk) {
+  const previous = partialFrames.get(socket);
+  const buffer = previous?.length ? Buffer.concat([previous, chunk]) : chunk;
   const messages = [];
   let offset = 0;
   while (offset + 2 <= buffer.length) {
+    const frameStart = offset;
     const first = buffer[offset++];
     const second = buffer[offset++];
     const opcode = first & 0x0f;
     let length = second & 0x7f;
     if (length === 126) {
-      if (offset + 2 > buffer.length) break;
+      if (offset + 2 > buffer.length) return rememberPartial(socket, buffer, frameStart, messages);
       length = buffer.readUInt16BE(offset);
       offset += 2;
     } else if (length === 127) {
-      if (offset + 8 > buffer.length) break;
+      if (offset + 8 > buffer.length) return rememberPartial(socket, buffer, frameStart, messages);
       length = Number(buffer.readBigUInt64BE(offset));
       offset += 8;
     }
     const masked = (second & 0x80) !== 0;
+    if (masked && offset + 4 > buffer.length) return rememberPartial(socket, buffer, frameStart, messages);
     const mask = masked ? buffer.subarray(offset, offset + 4) : null;
     if (masked) offset += 4;
-    if (offset + length > buffer.length) break;
+    if (offset + length > buffer.length) return rememberPartial(socket, buffer, frameStart, messages);
     const payload = Buffer.from(buffer.subarray(offset, offset + length));
     offset += length;
-    if (opcode === 8) return messages;
+    if (opcode === 8) {
+      partialFrames.delete(socket);
+      return messages;
+    }
     if (opcode !== 1) continue;
     if (mask) {
       for (let i = 0; i < payload.length; i += 1) payload[i] ^= mask[i % 4];
     }
     messages.push(payload.toString("utf8"));
   }
+  if (offset < buffer.length) partialFrames.set(socket, buffer.subarray(offset));
+  else partialFrames.delete(socket);
+  return messages;
+}
+
+function rememberPartial(socket, buffer, frameStart, messages) {
+  partialFrames.set(socket, buffer.subarray(frameStart));
   return messages;
 }
 

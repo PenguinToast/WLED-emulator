@@ -5,6 +5,7 @@
 ```sh
 npm run dev
 npm start
+npm run audit:native
 npm run cpp:run
 ```
 
@@ -14,6 +15,7 @@ Useful checks after refactors:
 
 ```sh
 npm run typecheck
+npm run audit:native
 npm run build
 node --check tools/run-cpp-effect.mjs
 node tools/generate-upstream-fx.mjs
