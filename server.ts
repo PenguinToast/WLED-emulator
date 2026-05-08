@@ -11,7 +11,10 @@ let devServer = null;
 const server = createServer((req, res) => handleHttp(req, res, ctx, { devServer }));
 devServer = await createDevServer(server);
 
-server.on("upgrade", (req, socket) => handleUpgrade(req, socket, ctx));
+server.on("upgrade", (req, socket) => {
+  const pathname = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`).pathname;
+  if (pathname === "/ws") handleUpgrade(req, socket, ctx);
+});
 server.listen(port, () => {
   console.log(`EDC WLED emulator listening on http://localhost:${port}`);
   console.log(`WLED UI:      http://localhost:${port}/`);

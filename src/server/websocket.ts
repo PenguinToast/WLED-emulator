@@ -4,10 +4,6 @@ import { applyStateUpdate, renderPreviewLeds } from "./device-state.js";
 import { siJson } from "./wled-json.js";
 
 export function handleUpgrade(req, socket, ctx) {
-  if (new URL(req.url, `http://${req.headers.host || "localhost"}`).pathname !== "/ws") {
-    socket.destroy();
-    return;
-  }
   const key = req.headers["sec-websocket-key"];
   if (!key) {
     socket.destroy();
@@ -108,4 +104,3 @@ function sendWs(socket, value) {
   }
   socket.write(Buffer.concat([header, payload]));
 }
-

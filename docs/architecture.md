@@ -43,7 +43,7 @@ This project runs the real WLED browser UI and mobile-app protocol against a loc
 - `src/emulator/color.ts`: color math, palette interpolation, and effect helper API.
 - `src/emulator/readouts.ts`: side-panel state readouts.
 
-Vite owns browser TypeScript in development and production builds. Development serves `/src/emulator/*.ts` directly through Vite middleware and leaves the vendored WLED UI untransformed; `npm run build` writes bundled browser assets under `dist/emulator/`, and the server prefers those built files for normal `npm start`.
+Vite owns browser TypeScript in development and production builds. Development serves `/src/emulator/*.ts` directly through Vite middleware and leaves the vendored WLED UI untransformed; `npm run build` writes bundled browser assets under `dist/emulator/`, and the server prefers those built files for normal `npm start`. The WLED WebSocket handler only claims `/ws` upgrades so Vite's HMR websocket can stay connected under `/emulator/`.
 
 ## Native Boundary
 
