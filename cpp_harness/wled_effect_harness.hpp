@@ -464,8 +464,8 @@ class HostSegment {
   bool check3 = false;
   bool reverse = false;
   uint8_t soundSim = 0;
-  uint16_t step = 0;
-  uint16_t call = 0;
+  uint32_t step = 0;
+  uint32_t call = 0;
   uint16_t aux0 = 0;
   uint16_t aux1 = 0;
   uint8_t* data = nullptr;

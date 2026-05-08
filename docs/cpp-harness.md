@@ -51,6 +51,8 @@ When a segment changes mode or bounds, the shim resets that segment's runtime fi
 
 The runner sends process-relative uptime seconds to the native process so `millis()`/`strip.now` retain frame-level precision for physics-style effects.
 
+The host `SEGENV.step` and `SEGENV.call` fields intentionally use WLED's 32-bit widths. Several upstream effects store millisecond timestamps, packed state, or long-running counters in these fields; truncating them to 16 bits causes effects such as Heartbeat to freeze once runner uptime passes the 65-second wrap boundary.
+
 The runner renders frames at a fast cadence from cached emulator state. WLED state still refreshes by HTTP because it is comparatively large and low-rate; audio arrives over the `/api/emulator/frames` typed WebSocket bus as `audio` messages, with `GET /api/emulator/audio` only used when the WebSocket is unavailable.
 
 Frames include a runner stream ID and a monotonically increasing frame number. The runner streams typed `frame` messages over `/api/emulator/frames` when possible and falls back to HTTP POSTs; the server ignores stale frames within the same stream so delayed older data cannot overwrite newer LED data, while still accepting fresh frames after runner restarts.

@@ -46,7 +46,10 @@ export function pollEmulatorState(now) {
     lastStatePoll = now;
     fetch("/api/emulator/state")
       .then((res) => res.json())
-      .then(updateFromEmulatorState)
+      .then((json) => {
+        updateFromEmulatorState(json);
+        updateReadouts();
+      })
       .catch(() => {});
   }
 }
