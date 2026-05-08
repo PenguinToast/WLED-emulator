@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -140,13 +141,74 @@ struct CRGB {
 };
 
 struct CRGBPalette16 {
-  CRGBPalette16() = default;
-  CRGBPalette16(std::initializer_list<uint32_t>) {}
+  std::array<CRGB, 16> entries{};
+
+  CRGBPalette16() {
+    for (size_t index = 0; index < entries.size(); index += 1) {
+      entries[index] = CRGB(CHSV(uint8_t(index * 16), 240, 255));
+    }
+  }
+
+  CRGBPalette16(std::initializer_list<uint32_t> colors) {
+    assignStops(colors);
+  }
+
   template <typename... Args>
-  explicit CRGBPalette16(Args...) {}
+  explicit CRGBPalette16(Args... args) {
+    assignStops({CRGB(args)...});
+  }
+
+ private:
+  void assignStops(std::initializer_list<uint32_t> colors) {
+    std::vector<CRGB> converted;
+    converted.reserve(colors.size());
+    for (uint32_t color : colors) converted.emplace_back(color);
+    assignStops(converted);
+  }
+
+  void assignStops(std::initializer_list<CRGB> colors) {
+    assignStops(std::vector<CRGB>(colors));
+  }
+
+  void assignStops(const std::vector<CRGB>& colors) {
+    if (colors.empty()) {
+      entries.fill(CRGB::Black);
+      return;
+    }
+    if (colors.size() == 1) {
+      entries.fill(colors.front());
+      return;
+    }
+
+    const size_t last = colors.size() - 1;
+    for (size_t index = 0; index < entries.size(); index += 1) {
+      const size_t scaled = index * last * 255 / (entries.size() - 1);
+      const size_t from = std::min(last, scaled / 255);
+      const size_t to = std::min(last, from + 1);
+      const uint8_t amount = uint8_t(scaled - from * 255);
+      entries[index] = CRGB(
+        uint8_t(colors[from].r + ((int16_t(colors[to].r) - colors[from].r) * amount) / 255),
+        uint8_t(colors[from].g + ((int16_t(colors[to].g) - colors[from].g) * amount) / 255),
+        uint8_t(colors[from].b + ((int16_t(colors[to].b) - colors[from].b) * amount) / 255)
+      );
+    }
+  }
 };
 #define SEGPALETTE CRGBPalette16{}
-inline void nblendPaletteTowardPalette(CRGBPalette16&, const CRGBPalette16&, uint8_t) {}
+static_assert(sizeof(CRGBPalette16) == 16 * sizeof(CRGB), "CRGBPalette16 must match FastLED's 16 RGB entries");
+
+inline void nblendPaletteTowardPalette(CRGBPalette16& current, const CRGBPalette16& target, uint8_t maxChanges) {
+  uint8_t changes = 0;
+  for (size_t colorIndex = 0; colorIndex < current.entries.size() && changes < maxChanges; colorIndex += 1) {
+    for (size_t channel = 0; channel < 3 && changes < maxChanges; channel += 1) {
+      uint8_t& source = current.entries[colorIndex][channel];
+      const uint8_t destination = target.entries[colorIndex][channel];
+      if (source == destination) continue;
+      source += source < destination ? 1 : -1;
+      changes += 1;
+    }
+  }
+}
 
 inline uint8_t clamp8(float value) {
   return static_cast<uint8_t>(std::max(0.0f, std::min(255.0f, value)));
@@ -284,8 +346,17 @@ inline uint16_t inoise16(uint32_t x, uint32_t y = 0, uint32_t z = 0) {
   return (uint16_t(inoise8(x, y, z)) << 8) | inoise8(x + 17, y + 31, z + 47);
 }
 
-inline CRGB ColorFromPalette(const CRGBPalette16&, uint8_t index, uint8_t brightness = 255, uint8_t = 0) {
-  CRGB color = hsv(index * 360.0f / 255.0f, 0.9f, brightness / 255.0f);
+inline CRGB ColorFromPalette(const CRGBPalette16& palette, uint8_t index, uint8_t brightness = 255, uint8_t blendType = 0) {
+  const uint8_t entry = index >> 4;
+  CRGB color = palette.entries[entry];
+  if (blendType != NOBLEND) {
+    const CRGB& next = palette.entries[(entry + 1) & 0x0f];
+    const uint8_t amount = (index & 0x0f) << 4;
+    color.r = uint8_t(color.r + ((int16_t(next.r) - color.r) * amount) / 255);
+    color.g = uint8_t(color.g + ((int16_t(next.g) - color.g) * amount) / 255);
+    color.b = uint8_t(color.b + ((int16_t(next.b) - color.b) * amount) / 255);
+  }
+  color.nscale8_video(brightness);
   return color;
 }
 
@@ -480,15 +551,29 @@ class HostSegment {
   bool is2D() const { return false; }
   uint32_t currentColor(uint8_t slot) const { return colors[slot % NUM_COLORS]; }
   bool allocateData(size_t len) {
-    if (storage.size() != len) storage.assign(len, 0);
-    data = storage.empty() ? nullptr : storage.data();
-    return len == 0 || data != nullptr;
+    if (len == 0) return false;
+
+    if (!storage.empty() && storageBytes >= len) {
+      data = reinterpret_cast<uint8_t*>(storage.data());
+      if (call == 0) std::memset(data, 0, len);
+      return true;
+    }
+
+    const size_t unitSize = sizeof(std::max_align_t);
+    const size_t units = (len + unitSize - 1) / unitSize;
+    storage.clear();
+    storage.resize(units);
+    storageBytes = len;
+    data = reinterpret_cast<uint8_t*>(storage.data());
+    if (data != nullptr) std::memset(data, 0, units * unitSize);
+    return data != nullptr;
   }
   void deallocateData() {
-    storage.clear();
+    storage = {};
+    storageBytes = 0;
     data = nullptr;
   }
-  uint16_t dataSize() const { return storage.size(); }
+  uint16_t dataSize() const { return static_cast<uint16_t>(std::min<size_t>(storageBytes, UINT16_MAX)); }
 
   void setPixelColor(int n, uint32_t c);
   void setPixelColor(unsigned n, uint32_t c) { setPixelColor(int(n), c); }
@@ -515,8 +600,14 @@ class HostSegment {
   uint32_t color_from_palette(uint16_t index, bool mapping, bool wrap, uint8_t mcol, uint8_t pbri = 255) const;
 
  private:
-  std::vector<uint8_t> storage;
+  std::vector<std::max_align_t> storage;
+  size_t storageBytes = 0;
 };
+
+static_assert(std::is_same_v<decltype(HostSegment::step), uint32_t>, "Segment step must match WLED segment_runtime.step");
+static_assert(std::is_same_v<decltype(HostSegment::call), uint32_t>, "Segment call must match WLED segment_runtime.call");
+static_assert(std::is_same_v<decltype(HostSegment::aux0), uint16_t>, "Segment aux0 must match WLED segment_runtime.aux0");
+static_assert(std::is_same_v<decltype(HostSegment::aux1), uint16_t>, "Segment aux1 must match WLED segment_runtime.aux1");
 
 class HostStrip {
  public:

@@ -39,7 +39,7 @@ npm run cpp:generate
 
 The runner now sends the full WLED segment list to the native process each frame. Each segment is rendered with its own `id`, `start`, `stop`, brightness, mode, speed, intensity, custom effect sliders (`c1`/`c2`/`c3`), option toggles (`o1`/`o2`/`o3`), sound simulation selector (`si`), palette, and color slots, matching the daisy-chained ring fixture more closely than the earlier single-segment path.
 
-Native segment state is persistent per segment ID. `SEGENV.data`, `SEGENV.call`, and related fields are preserved across frames unless an effect requests a different allocation size, which is required for upstream modes such as Bouncing Balls and Aurora.
+Native segment state is persistent per segment ID. `SEGENV.data`, `SEGENV.call`, and related fields are preserved across frames unless an effect requests more scratch memory, which is required for upstream modes such as Bouncing Balls and Aurora. The scratch buffer is aligned like `calloc()` memory because upstream effects commonly cast `SEGENV.data` to typed arrays and small structs.
 
 The 1D shim also decodes WLED's virtual-strip pixel indexes back to local segment coordinates. Several upstream 1D effects use that encoding even when there is only one virtual strip.
 
@@ -52,6 +52,10 @@ When a segment changes mode or bounds, the shim resets that segment's runtime fi
 The runner sends process-relative uptime seconds to the native process so `millis()`/`strip.now` retain frame-level precision for physics-style effects.
 
 The host `SEGENV.step` and `SEGENV.call` fields intentionally use WLED's 32-bit widths. Several upstream effects store millisecond timestamps, packed state, or long-running counters in these fields; truncating them to 16 bits causes effects such as Heartbeat to freeze once runner uptime passes the 65-second wrap boundary.
+
+The host `fade_out()` helper follows WLED's secondary-color fade semantics rather than fading to black. Effects that rely on trails or background decay expect `colors[1]` to be the destination color, while `fadeToBlackBy()` remains the explicit black-fade helper.
+
+The host `CRGBPalette16` shim stores the same 16 RGB entries as FastLED's palette type. This matters for upstream effects that allocate palette arrays in `SEGENV.data`, blend palettes over time, or pass local palettes to `ColorFromPalette()`.
 
 The runner renders frames at a fast cadence from cached emulator state. WLED state still refreshes by HTTP because it is comparatively large and low-rate; audio arrives over the `/api/emulator/frames` typed WebSocket bus as `audio` messages, with `GET /api/emulator/audio` only used when the WebSocket is unavailable.
 

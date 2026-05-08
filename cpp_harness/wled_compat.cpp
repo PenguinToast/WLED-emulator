@@ -99,8 +99,25 @@ void HostSegment::fill(uint32_t color) {
 }
 
 void HostSegment::fade_out(uint8_t rate) {
-  const uint8_t keep = 255 - rate;
-  for (uint16_t i = 0; i < length(); i += 1) setPixelColor(i, color_fade(getPixelColor(i), keep, true));
+  rate = (256 - rate) >> 1;
+  const uint16_t mappedRate = 256 / (uint16_t(rate) + 1);
+  const uint32_t target = colors[1];
+
+  for (uint16_t i = 0; i < length(); i += 1) {
+    uint32_t color = getPixelColor(i);
+    if (color == target) continue;
+
+    for (uint8_t shift = 0; shift <= 24; shift += 8) {
+      const int16_t current = (color >> shift) & 0xff;
+      const int16_t desired = (target >> shift) & 0xff;
+      int16_t delta = ((desired - current) * int16_t(mappedRate)) >> 8;
+      if (delta == 0) delta = desired > current ? 1 : -1;
+      const uint8_t next = uint8_t(std::clamp<int16_t>(current + delta, 0, 255));
+      color = (color & ~(uint32_t(0xff) << shift)) | (uint32_t(next) << shift);
+    }
+
+    setPixelColor(i, color);
+  }
 }
 
 void HostSegment::fadeToBlackBy(uint8_t fadeBy) {
