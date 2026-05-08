@@ -1,14 +1,16 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { vendorWledDir } from "./config.mjs";
+import { rootDir, vendorWledDir } from "./config.mjs";
 
 const OFFICIAL_EFFECT_SLOTS = 187;
 export const HOST_CUSTOM_EFFECT_ID = 187;
+const nativeEffectManifestPath = join(rootDir, "cpp_harness/generated/upstream_fx_1d_modes.json");
 
 export function loadOfficialWledEffects() {
   const fxSource = readFileSync(join(vendorWledDir, "wled00/FX.cpp"), "utf8");
   const headerSource = readFileSync(join(vendorWledDir, "wled00/FX.h"), "utf8");
+  const supportedModes = loadNativeSupportedModes();
   const definitions = new Map();
   const modes = [];
 
@@ -18,9 +20,9 @@ export function loadOfficialWledEffects() {
   for (const match of fxSource.matchAll(/addEffect\((FX_MODE_[A-Z0-9_]+),\s*&[^,]+,\s*(_data_[A-Z0-9_]+)/g)) {
     const idMatch = new RegExp(`#define\\s+${match[1]}\\s+(\\d+)`).exec(headerSource);
     if (!idMatch) continue;
-    modes[Number(idMatch[1])] = definitions.get(match[2]) || "RSVD";
+    if (supportedModes.has(match[1])) modes[Number(idMatch[1])] = definitions.get(match[2]) || "RSVD";
   }
-  modes[0] = definitions.get("_data_FX_MODE_STATIC") || "Solid";
+  if (supportedModes.has("FX_MODE_STATIC")) modes[0] = definitions.get("_data_FX_MODE_STATIC") || "Solid";
 
   const effects = [];
   const fxdata = [];
@@ -33,4 +35,13 @@ export function loadOfficialWledEffects() {
   effects[HOST_CUSTOM_EFFECT_ID] = "EDC Custom";
   fxdata[HOST_CUSTOM_EFFECT_ID] = "!,Width;!,!;!;01f";
   return { effects, fxdata };
+}
+
+function loadNativeSupportedModes() {
+  const manifest = JSON.parse(readFileSync(nativeEffectManifestPath, "utf8"));
+  return new Set(
+    (Array.isArray(manifest.modes) ? manifest.modes : [])
+      .map((mode) => mode?.name)
+      .filter(Boolean),
+  );
 }

@@ -26,17 +26,14 @@ export function applyStateUpdate(state, patch, catalog) {
     const next = clone(state.seg);
     for (const segPatch of patch.seg) {
       if (!segPatch || typeof segPatch !== "object") continue;
-      const index = Number.isInteger(segPatch.id) ? next.findIndex((seg) => seg.id === segPatch.id) : 0;
-      const targetIndex = index >= 0 ? index : next.length;
-      next[targetIndex] = deepMerge(next[targetIndex] || { id: targetIndex }, segPatch);
+      mergeSegmentPatch(next, segPatch);
     }
     normalizedPatch = { ...patch, seg: next };
   } else if (patch.seg && typeof patch.seg === "object") {
     const next = clone(state.seg);
-    const targetIndexes = next
-      .map((seg, index) => (seg.sel ? index : -1))
-      .filter((index) => index >= 0);
-    const indexes = targetIndexes.length ? targetIndexes : [0];
+    const indexes = Number.isInteger(patch.seg.id)
+      ? [segmentIndexById(next, patch.seg.id)]
+      : selectedSegmentIndexes(next);
     for (const index of indexes) {
       next[index] = deepMerge(next[index] || { id: index }, patch.seg);
     }
@@ -44,6 +41,23 @@ export function applyStateUpdate(state, patch, catalog) {
   }
   deepMerge(state, normalizedPatch);
   normalizeState(state, catalog);
+}
+
+function segmentIndexById(segments, id) {
+  const index = segments.findIndex((seg) => seg?.id === id);
+  return index >= 0 ? index : segments.length;
+}
+
+function selectedSegmentIndexes(segments) {
+  const indexes = segments
+    .map((seg, index) => (seg?.sel ? index : -1))
+    .filter((index) => index >= 0);
+  return indexes.length ? indexes : [0];
+}
+
+function mergeSegmentPatch(segments, segPatch) {
+  const targetIndex = Number.isInteger(segPatch.id) ? segmentIndexById(segments, segPatch.id) : 0;
+  segments[targetIndex] = deepMerge(segments[targetIndex] || { id: targetIndex }, segPatch);
 }
 
 export function normalizeState(state, catalog) {
@@ -103,4 +117,3 @@ function normalizeColors(colors) {
     ];
   });
 }
-
