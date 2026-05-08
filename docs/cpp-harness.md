@@ -51,7 +51,7 @@ When a segment changes mode or bounds, the shim resets that segment's runtime fi
 
 The runner sends process-relative uptime seconds to the native process so `millis()`/`strip.now` retain frame-level precision for physics-style effects.
 
-The runner renders frames at a fast cadence from cached emulator state, refreshing WLED state/audio controls separately. This keeps the native frame stream smooth without fetching the full catalog-sized state payload every frame.
+The runner renders frames at a fast cadence from cached emulator state, refreshing WLED state and audio controls separately. Audio uses the lightweight `/api/emulator/audio` endpoint at a higher cadence than full state so audio-reactive effects do not wait for the catalog-sized state payload.
 
 Frames include a runner stream ID and a monotonically increasing frame number. The runner streams them over `/api/emulator/frames` when possible and falls back to HTTP POSTs; the server ignores stale frames within the same stream so delayed older data cannot overwrite newer LED data, while still accepting fresh frames after runner restarts.
 
@@ -75,16 +75,16 @@ The JSON effect catalog is derived from the generated native dispatch table. Uns
 
 The server consumes `upstream_fx_1d_modes.json` for this supported-mode contract. Keep that as the boundary between native generation and WLED protocol serving; server modules should not inspect generated C++ headers or source files.
 
-The host shim implements `UsermodManager::getUMData()` for `USERMOD_ID_AUDIOREACTIVE` and feeds the upstream `um_data_t` fields from emulator audio:
+The host shim implements `UsermodManager::getUMData()` for `USERMOD_ID_AUDIOREACTIVE` and feeds the upstream `um_data_t` fields from emulator audio. Browser audio values arrive normalized from `0.0` to `1.0`; the shim applies a simple AGC-style square-root curve for `volumeSmth` so short ring segments still move under normal music levels.
 
 - `u_data[0]`: smoothed volume, `volumeSmth`
 - `u_data[1]`: raw volume, `volumeRaw`
-- `u_data[2]`: 16-bin FFT byte array, `fftResult`
+- `u_data[2]`: 16-bin FFT byte array, `fftResult`, derived from browser analyzer bins
 - `u_data[3]`: beat flag, `samplePeak`
 - `u_data[4]`: dominant frequency estimate, `FFT_MajorPeak`
 - `u_data[5]`: FFT magnitude estimate, `my_magnitude`
 - `u_data[6]` and `u_data[7]`: mutable `maxVol` and `binNum` controls used by several SR effects
-- `u_data[8]`: float FFT bin array, `fftBin`
+- `u_data[8]`: float FFT bin array, `fftBin`, derived from browser analyzer bins
 
 Modes that require WLED's 2D matrix renderer are still intentionally skipped in the generated dispatch until the host fixture grows matrix geometry.
 

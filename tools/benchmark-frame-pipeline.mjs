@@ -63,6 +63,8 @@ async function benchmarkRawCpp(emulatorState) {
   }
 
   function inputLine(frame) {
+    const bins = Array.isArray(audio.bins) ? audio.bins.slice(0, 16) : [];
+    while (bins.length < 16) bins.push(0);
     const fields = [
       ((startedAt + frame * 16 - startedAt) / 1000).toFixed(3),
       frame,
@@ -74,6 +76,8 @@ async function benchmarkRawCpp(emulatorState) {
       audio.treble ?? 0,
       audio.beat ? 1 : 0,
       audio.bpm ?? 0,
+      bins.length,
+      ...bins,
     ];
     for (const [index, segment] of segments.entries()) {
       fields.push(

@@ -119,7 +119,7 @@ export function updateAudio() {
 
 let lastAudioPost = 0;
 export function postAudio(now) {
-  if (now - lastAudioPost < 250) return;
+  if (now - lastAudioPost < 50) return;
   lastAudioPost = now;
   fetch("/api/emulator/audio", {
     method: "POST",
@@ -131,6 +131,7 @@ export function postAudio(now) {
       treble: audio.treble,
       beat: audio.beat,
       bpm: audio.bpm,
+      bins: Array.from(audio.bins.slice(0, 16)),
     }),
   }).catch(() => {});
 }

@@ -58,6 +58,8 @@ export async function handleHttp(req, res, ctx, options: HttpOptions = {}) {
     }
     if (url.pathname === "/api/emulator/audio" && req.method === "POST") {
       const body = await readJsonBody(req);
+      const bins = Array.isArray(body?.bins) ? body.bins.slice(0, 16).map((value) => clamp(Number(value ?? 0), 0, 1)) : ctx.audio.bins;
+      while (bins.length < 16) bins.push(0);
       Object.assign(ctx.audio, {
         volume: clamp(Number(body?.volume ?? 0), 0, 1),
         bass: clamp(Number(body?.bass ?? 0), 0, 1),
@@ -65,10 +67,12 @@ export async function handleHttp(req, res, ctx, options: HttpOptions = {}) {
         treble: clamp(Number(body?.treble ?? 0), 0, 1),
         beat: Boolean(body?.beat),
         bpm: clamp(Number(body?.bpm ?? 0), 0, 300),
+        bins,
         updatedAt: Date.now(),
       });
       return json(res, { ok: true });
     }
+    if (url.pathname === "/api/emulator/audio") return json(res, ctx.audio);
     if (url.pathname === "/api/emulator/frame" && req.method === "POST") {
       const body = await readJsonBody(req);
       const fresh = updateExternalFrame(ctx, body);

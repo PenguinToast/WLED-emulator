@@ -31,6 +31,7 @@ Audio-reactive compatibility globals are also populated from the browser audio a
 - `volumeSmth`
 - `samplePeak`
 - `fftResult[16]`
+- `fftBin[16]`
 - `FFT_MajorPeak`
 
 ## Active Custom Mode

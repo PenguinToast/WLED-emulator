@@ -26,6 +26,7 @@ int main() {
   int stateBrightness = 255;
   int segmentCount = 0;
   int beat = 0;
+  int binCount = 0;
 
   while (std::cin >> ctx.time
                   >> ctx.frame
@@ -36,8 +37,15 @@ int main() {
                   >> ctx.audio.mid
                   >> ctx.audio.treble
                   >> beat
-                  >> ctx.audio.bpm) {
+                  >> ctx.audio.bpm
+                  >> binCount) {
     ctx.audio.beat = beat != 0;
+    ctx.audio.bins.fill(0.0f);
+    for (int index = 0; index < binCount; index += 1) {
+      float value = 0.0f;
+      std::cin >> value;
+      if (index < int(ctx.audio.bins.size())) ctx.audio.bins[index] = std::max(0.0f, std::min(1.0f, value));
+    }
     std::fill(leds.begin(), leds.end(), CRGB::Black);
 
     for (int index = 0; index < segmentCount; index += 1) {

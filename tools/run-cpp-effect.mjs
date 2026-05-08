@@ -44,8 +44,11 @@ let frame = 0;
 const startedAt = Date.now();
 const streamId = `cpp_harness:${startedAt}`;
 let cachedState = await fetch(`${server}/api/emulator/state`).then((res) => res.json());
+let cachedAudio = cachedState.audio || {};
 let lastStateFetch = 0;
 let stateFetchPending = false;
+let lastAudioFetch = 0;
+let audioFetchPending = false;
 let frameSocket = null;
 let lastFrameSocketAttempt = 0;
 
@@ -82,13 +85,31 @@ function refreshState(now) {
     });
 }
 
+function refreshAudio(now) {
+  if (audioFetchPending || now - lastAudioFetch < 33) return;
+  lastAudioFetch = now;
+  audioFetchPending = true;
+  fetch(`${server}/api/emulator/audio`)
+    .then((res) => res.json())
+    .then((audio) => {
+      cachedAudio = audio;
+    })
+    .catch((error) => console.error(error.message))
+    .finally(() => {
+      audioFetchPending = false;
+    });
+}
+
 function tick() {
   const now = Date.now();
   refreshState(now);
+  refreshAudio(now);
   ensureFrameSocket(now);
   const state = cachedState;
   const segments = state.state.seg?.length ? state.state.seg : [];
-  const audio = state.audio || {};
+  const audio = cachedAudio || {};
+  const bins = Array.isArray(audio.bins) ? audio.bins.slice(0, 16) : [];
+  while (bins.length < 16) bins.push(0);
   if (!effect.stdin.writable) return;
   const fields = [
     ((now - startedAt) / 1000).toFixed(3),
@@ -101,6 +122,8 @@ function tick() {
     audio.treble ?? 0,
     audio.beat ? 1 : 0,
     audio.bpm ?? 0,
+    bins.length,
+    ...bins,
   ];
   for (const [index, segment] of segments.entries()) {
     fields.push(

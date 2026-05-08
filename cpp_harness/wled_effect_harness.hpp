@@ -390,6 +390,7 @@ struct AudioData {
   float treble = 0.0f;
   bool beat = false;
   float bpm = 0.0f;
+  std::array<float, 16> bins = {};
 };
 
 enum um_types_t {
@@ -541,7 +542,7 @@ class HostStrip {
 extern HostStrip strip;
 extern AudioData audioData;
 extern float volumeSmth;
-extern uint16_t volumeRaw;
+extern int16_t volumeRaw;
 extern float FFT_MajorPeak;
 extern float my_magnitude;
 extern bool samplePeak;

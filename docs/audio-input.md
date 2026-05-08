@@ -16,6 +16,9 @@ All sources feed the same analyzer, so WLED audio-reactive effects receive the s
 - treble
 - beat
 - BPM estimate
+- 16 analyzer bins
+
+The browser posts this audio state around 20 times per second. The C++ runner fetches `/api/emulator/audio` separately from full WLED state so native audio-reactive effects can react without waiting on the larger state/catalog payload.
 
 ## Browser Capture Notes
 
