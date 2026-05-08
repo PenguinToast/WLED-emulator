@@ -24,7 +24,7 @@ The host compatibility layer in `cpp_harness/wled_effect_harness.hpp` currently 
 - `SEGMENT.blendPixelColor()`, `addPixelColor()`, `fadePixelColor()`
 - `SEGMENT.color_wheel()` and `SEGMENT.color_from_palette()`
 - `color_blend()`, `color_add()`, `color_fade()`, `RGBW32()`, `CRGB`, `CHSV`
-- `random8()`, `random16()`, `sin8_t()`, `cos8_t()`, `sin16_t()`, `cos16_t()`, `map()`, `mapf()`, `constrain()`, `millis()`, `micros()`
+- `random8()`, `random16()`, `sin8_t()`, `cos8_t()`, `sin16_t()`, `cos16_t()`, `beat8()`, `beat16()`, `beatsin8_t()`, `beatsin16_t()`, `map()`, `mapf()`, `constrain()`, `millis()`, `micros()`
 
 Audio-reactive compatibility globals are also populated from the browser audio analyzer. The emulator can feed that analyzer from mic input, computer/share capture, or audio-file playback:
 

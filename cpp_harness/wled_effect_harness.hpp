@@ -124,7 +124,12 @@ struct CRGB {
     b = b * scale / 255;
     return *this;
   }
-  CRGB& nscale8_video(uint8_t scale) { return nscale8(scale); }
+  CRGB& nscale8_video(uint8_t scale) {
+    r = ((uint16_t(r) * scale) >> 8) + (r && scale ? 1 : 0);
+    g = ((uint16_t(g) * scale) >> 8) + (g && scale ? 1 : 0);
+    b = ((uint16_t(b) * scale) >> 8) + (b && scale ? 1 : 0);
+    return *this;
+  }
   uint8_t getAverageLight() const { return (uint16_t(r) + g + b) / 3; }
   explicit operator bool() const { return r || g || b; }
   CRGB fadeToBlackBy(uint8_t fade) const {
@@ -229,7 +234,7 @@ inline uint8_t cos8_t(uint8_t theta) {
 }
 
 inline uint8_t triwave8(uint8_t value) {
-  return value < 128 ? value * 2 : 255 - (value - 128) * 2;
+  return (value & 0x80) ? uint8_t((255 - value) * 2) : uint8_t(value * 2);
 }
 
 inline uint8_t cubicwave8(uint8_t value) {
@@ -331,22 +336,13 @@ inline void random16_set_seed(uint16_t seed) {
   hostPrng = (hostPrng & 0xffff0000U) | seed;
 }
 
-inline uint16_t beatsin88_t(uint16_t beatsPerMinute88, uint16_t low = 0, uint16_t high = 65535, uint32_t timebase = 0, uint16_t phaseOffset = 0) {
+inline uint16_t beat88(uint16_t beatsPerMinute88, uint32_t timebase = 0) {
   const float bpm = beatsPerMinute88 / 256.0f;
   const float seconds = (millis() - timebase) / 1000.0f;
-  const float wave = (std::sin(seconds * bpm * 2.0f * 3.14159265f / 60.0f + phaseOffset * 2.0f * 3.14159265f / 65535.0f) + 1.0f) * 0.5f;
-  return low + uint16_t((high - low) * wave);
+  return uint16_t(std::fmod(seconds * bpm * 65536.0f / 60.0f, 65536.0f));
 }
 
-inline uint8_t beatsin8_t(uint8_t bpm, uint8_t low = 0, uint8_t high = 255, uint32_t timebase = 0, uint8_t phaseOffset = 0) {
-  return clamp8(beatsin88_t(uint16_t(bpm) << 8, low, high, timebase, uint16_t(phaseOffset) << 8));
-}
-
-inline uint16_t beatsin16_t(uint8_t bpm, uint16_t low = 0, uint16_t high = 65535, uint32_t timebase = 0, uint16_t phaseOffset = 0) {
-  return beatsin88_t(uint16_t(bpm) << 8, low, high, timebase, phaseOffset);
-}
-
-inline uint8_t beat8(uint8_t bpm, uint32_t timebase = 0) {
+inline uint8_t beat8(uint16_t bpm, uint32_t timebase = 0) {
   const float seconds = (millis() - timebase) / 1000.0f;
   return uint8_t(std::fmod(seconds * bpm * 256.0f / 60.0f, 256.0f));
 }
@@ -354,6 +350,27 @@ inline uint8_t beat8(uint8_t bpm, uint32_t timebase = 0) {
 inline uint16_t beat16(uint16_t bpm, uint32_t timebase = 0) {
   const float seconds = (millis() - timebase) / 1000.0f;
   return uint16_t(std::fmod(seconds * bpm * 65536.0f / 60.0f, 65536.0f));
+}
+
+inline uint16_t beatsin88_t(uint16_t beatsPerMinute88, uint16_t low = 0, uint16_t high = 65535, uint32_t timebase = 0, uint16_t phaseOffset = 0) {
+  const uint16_t beat = beat88(beatsPerMinute88, timebase);
+  const uint16_t wave = uint16_t(int32_t(sin16_t(beat + phaseOffset)) + 32768);
+  const uint16_t range = high - low;
+  return low + scale16(wave, range);
+}
+
+inline uint8_t beatsin8_t(uint16_t bpm, uint8_t low = 0, uint8_t high = 255, uint32_t timebase = 0, uint8_t phaseOffset = 0) {
+  const uint8_t beat = beat8(bpm, timebase);
+  const uint8_t wave = sin8_t(beat + phaseOffset);
+  const uint8_t range = high - low;
+  return low + scale8(wave, range);
+}
+
+inline uint16_t beatsin16_t(uint16_t bpm, uint16_t low = 0, uint16_t high = 65535, uint32_t timebase = 0, uint16_t phaseOffset = 0) {
+  const uint16_t beat = beat16(bpm, timebase);
+  const uint16_t wave = uint16_t(int32_t(sin16_t(beat + phaseOffset)) + 32768);
+  const uint16_t range = high - low;
+  return low + scale16(wave, range);
 }
 
 inline uint8_t get_random_wheel_index(uint8_t pos) {
