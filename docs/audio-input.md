@@ -1,6 +1,6 @@
 # Audio Input
 
-The emulator browser app analyzes audio with the Web Audio API and posts normalized bands to `POST /api/emulator/audio`. The C++ harness reads that server audio state and exposes it through the WLED audio-reactive compatibility globals and `UsermodManager::getUMData()`.
+The emulator browser app analyzes audio with the Web Audio API and streams normalized bands over `/api/emulator/frames` as typed `audio` WebSocket messages. `POST /api/emulator/audio` remains available as an HTTP fallback and inspection path. The C++ harness reads that server audio state and exposes it through the WLED audio-reactive compatibility globals and `UsermodManager::getUMData()`.
 
 ## Sources
 
@@ -18,7 +18,7 @@ All sources feed the same analyzer, so WLED audio-reactive effects receive the s
 - BPM estimate
 - 16 analyzer bins
 
-The browser posts this audio state around 20 times per second. The C++ runner fetches `/api/emulator/audio` separately from full WLED state so native audio-reactive effects can react without waiting on the larger state/catalog payload.
+The browser streams this audio state around 20 times per second on the same WebSocket used for native RGB frames. The C++ runner receives those audio messages from the frame bus and only falls back to `GET /api/emulator/audio` when the WebSocket is unavailable.
 
 ## Browser Capture Notes
 

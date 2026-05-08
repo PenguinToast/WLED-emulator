@@ -43,6 +43,7 @@ function parseFrameLine(line) {
 let frame = 0;
 const startedAt = Date.now();
 const streamId = `cpp_harness:${startedAt}`;
+const audioTimeoutMs = 1200;
 let cachedState = await fetch(`${server}/api/emulator/state`).then((res) => res.json());
 let cachedAudio = cachedState.audio || {};
 let lastStateFetch = 0;
@@ -62,12 +63,22 @@ function ensureFrameSocket(now) {
   if (now - lastFrameSocketAttempt < 1000) return;
   lastFrameSocketAttempt = now;
   frameSocket = new WebSocket(frameWebSocketUrl());
+  frameSocket.addEventListener("message", handleFrameSocketMessage);
   frameSocket.addEventListener("close", () => {
     frameSocket = null;
   });
   frameSocket.addEventListener("error", () => {
     frameSocket = null;
   });
+}
+
+function handleFrameSocketMessage(event) {
+  try {
+    const message = JSON.parse(String(event.data));
+    if (message?.type === "audio") cachedAudio = message;
+  } catch {
+    // Ignore malformed bus messages.
+  }
 }
 
 function refreshState(now) {
@@ -86,6 +97,7 @@ function refreshState(now) {
 }
 
 function refreshAudio(now) {
+  if (frameSocket?.readyState === WebSocket.OPEN) return;
   if (audioFetchPending || now - lastAudioFetch < 33) return;
   lastAudioFetch = now;
   audioFetchPending = true;
@@ -107,7 +119,7 @@ function tick() {
   ensureFrameSocket(now);
   const state = cachedState;
   const segments = state.state.seg?.length ? state.state.seg : [];
-  const audio = cachedAudio || {};
+  const audio = isFreshAudio(cachedAudio, now) ? cachedAudio : {};
   const bins = Array.isArray(audio.bins) ? audio.bins.slice(0, 16) : [];
   while (bins.length < 16) bins.push(0);
   if (!effect.stdin.writable) return;
@@ -150,7 +162,7 @@ function tick() {
     latestPayload = pending.shift();
   }
   if (latestPayload) {
-    const payload = JSON.stringify({ source: "cpp_harness", streamId, frame, rgb: latestPayload.rgb, leds: latestPayload.leds });
+    const payload = JSON.stringify({ type: "frame", source: "cpp_harness", streamId, frame, rgb: latestPayload.rgb, leds: latestPayload.leds });
     if (frameSocket?.readyState === WebSocket.OPEN) {
       frameSocket.send(payload);
     } else {
@@ -162,6 +174,10 @@ function tick() {
     }
   }
   frame += 1;
+}
+
+function isFreshAudio(audio, now) {
+  return Number.isFinite(audio?.updatedAt) && now - audio.updatedAt < audioTimeoutMs;
 }
 
 console.log(`Streaming C++ effect frames to ${server}/emulator`);

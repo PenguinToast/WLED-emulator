@@ -1,5 +1,5 @@
 import { ui } from "./dom.js";
-import { audio } from "./model.js";
+import { audio, model } from "./model.js";
 import { clamp, mix } from "./color.js";
 
 type DisplayAudioConstraints = MediaTrackConstraints & {
@@ -73,7 +73,9 @@ export function stopAudio() {
   ui.player.removeAttribute("src");
   ui.player.load();
   audio.volume = audio.bass = audio.mid = audio.treble = audio.bpm = 0;
+  audio.beat = false;
   audio.bins.fill(0);
+  sendAudioPayload();
 }
 
 export function updateAudio() {
@@ -119,20 +121,36 @@ export function updateAudio() {
 
 let lastAudioPost = 0;
 export function postAudio(now) {
+  if (!audio.analyser || !audio.source) return;
   if (now - lastAudioPost < 50) return;
   lastAudioPost = now;
+  sendAudioPayload();
+}
+
+function sendAudioPayload() {
+  const payload = {
+    type: "audio",
+    source: "browser",
+    volume: audio.volume,
+    bass: audio.bass,
+    mid: audio.mid,
+    treble: audio.treble,
+    beat: audio.beat,
+    bpm: audio.bpm,
+    bins: Array.from(audio.bins.slice(0, 16)),
+  };
+  if (model.frameWs?.readyState === WebSocket.OPEN) {
+    try {
+      model.frameWs.send(JSON.stringify(payload));
+      return;
+    } catch {
+      // Fall through to HTTP fallback.
+    }
+  }
   fetch("/api/emulator/audio", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      volume: audio.volume,
-      bass: audio.bass,
-      mid: audio.mid,
-      treble: audio.treble,
-      beat: audio.beat,
-      bpm: audio.bpm,
-      bins: Array.from(audio.bins.slice(0, 16)),
-    }),
+    body: JSON.stringify(payload),
   }).catch(() => {});
 }
 

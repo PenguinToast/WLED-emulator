@@ -20,6 +20,7 @@ export function createAppContext() {
       beat: false,
       bpm: 0,
       bins: Array.from({ length: 16 }, () => 0),
+      source: "",
       updatedAt: 0,
     },
     externalFrame: {

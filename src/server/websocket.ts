@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 
+import { audioMessage, updateAudioState } from "./audio-state.js";
 import { applyStateUpdate, renderPreviewLeds } from "./device-state.js";
 import { siJson } from "./wled-json.js";
 
@@ -15,7 +16,8 @@ export function handleUpgrade(req, socket, ctx) {
 export function handleFrameUpgrade(req, socket, ctx) {
   acceptWebSocket(req, socket);
   ctx.frameSockets.add(socket);
-  if (externalFrameLedCount(ctx.externalFrame)) sendWs(socket, ctx.externalFrame);
+  if (externalFrameLedCount(ctx.externalFrame)) sendWs(socket, frameMessage(ctx.externalFrame));
+  sendWs(socket, audioMessage(ctx.audio));
   socket.on("data", (buffer) => handleFrameData(buffer, ctx));
   socket.on("close", () => ctx.frameSockets.delete(socket));
   socket.on("error", () => ctx.frameSockets.delete(socket));
@@ -60,8 +62,20 @@ export function updateExternalFrame(ctx, value) {
     frame: Number.isFinite(frame) ? frame : (ctx.externalFrame.frame ?? 0) + 1,
     streamId,
   };
-  for (const socket of ctx.frameSockets) sendWs(socket, ctx.externalFrame);
+  for (const socket of ctx.frameSockets) sendWs(socket, frameMessage(ctx.externalFrame));
   return true;
+}
+
+export function frameMessage(frame) {
+  return {
+    type: "frame",
+    leds: frame.leds,
+    rgb: frame.rgb,
+    updatedAt: frame.updatedAt,
+    source: frame.source,
+    frame: frame.frame,
+    streamId: frame.streamId,
+  };
 }
 
 export function externalFrameLedCount(frame) {
@@ -99,7 +113,13 @@ function handleFrameData(buffer, ctx) {
   const messages = decodeWs(buffer);
   for (const message of messages) {
     try {
-      updateExternalFrame(ctx, JSON.parse(message));
+      const data = JSON.parse(message);
+      if (data?.type === "audio") {
+        updateAudioState(ctx, data);
+        for (const socket of ctx.frameSockets) sendWs(socket, audioMessage(ctx.audio));
+      } else if (data?.type === "frame") {
+        updateExternalFrame(ctx, data);
+      }
     } catch {
       // Ignore malformed frame payloads.
     }

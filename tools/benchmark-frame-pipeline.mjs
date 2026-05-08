@@ -104,7 +104,9 @@ async function benchmarkRawCpp(emulatorState) {
 function benchmarkFrameStream() {
   const wsUrl = `${server.replace(/^http/, "ws")}/api/emulator/frames`;
   const started = process.hrtime.bigint();
-  let messages = 0;
+  let busMessages = 0;
+  let frameMessages = 0;
+  let audioMessages = 0;
   let rgbFrames = 0;
   let ledFrames = 0;
   let firstFrame = null;
@@ -120,7 +122,13 @@ function benchmarkFrameStream() {
     ws.onmessage = (event) => {
       const now = Date.now();
       const frame = JSON.parse(event.data);
-      messages += 1;
+      busMessages += 1;
+      if (frame.type === "audio") {
+        audioMessages += 1;
+        return;
+      }
+      if (frame.type !== "frame") return;
+      frameMessages += 1;
       if (typeof frame.rgb === "string" && frame.rgb.length) rgbFrames += 1;
       if (Array.isArray(frame.leds) && frame.leds.length) ledFrames += 1;
       if (firstFrame === null) firstFrame = frame.frame;
@@ -141,9 +149,11 @@ function benchmarkFrameStream() {
         ws.close();
         resolve({
           benchmark: "frame_ws_receive",
-          messages,
+          busMessages,
+          audioMessages,
+          frameMessages,
           elapsedMs: Math.round(elapsedMs),
-          messageFps: Math.round(messages / (elapsedMs / 1000)),
+          frameMessageFps: Math.round(frameMessages / (elapsedMs / 1000)),
           firstFrame,
           lastFrame,
           sourceFrameFps: firstFrame === null ? 0 : Math.round((lastFrame - firstFrame) / (elapsedMs / 1000)),

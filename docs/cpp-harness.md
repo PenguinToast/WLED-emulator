@@ -11,7 +11,7 @@ The C++ harness is the current path for iterating on native custom effects witho
 - `cpp_harness/generated/upstream_fx_1d_modes.json`: generated support manifest consumed by the server effect catalog.
 - `cpp_harness/custom_effect.cpp`: `mode_edc_custom()` and native dispatch into generated upstream effects.
 - `cpp_harness/main.cpp`: stdin/stdout process wrapper that renders every active WLED segment once per frame.
-- `tools/run-cpp-effect.mjs`: compiles the harness, polls emulator state/audio, and streams RGB frames back to `/api/emulator/frames`.
+- `tools/run-cpp-effect.mjs`: compiles the harness, subscribes to emulator audio, polls WLED state, and streams RGB frames back to `/api/emulator/frames`.
 - `tools/benchmark-frame-pipeline.mjs`: measures raw C++ frame throughput and end-to-end WebSocket frame-stream throughput.
 - `tools/generate-upstream-fx.mjs`: regenerates the host-adapted upstream source and dispatch header from `vendor/wled-0.15.4/wled00/FX.cpp`.
 
@@ -51,9 +51,11 @@ When a segment changes mode or bounds, the shim resets that segment's runtime fi
 
 The runner sends process-relative uptime seconds to the native process so `millis()`/`strip.now` retain frame-level precision for physics-style effects.
 
-The runner renders frames at a fast cadence from cached emulator state, refreshing WLED state and audio controls separately. Audio uses the lightweight `/api/emulator/audio` endpoint at a higher cadence than full state so audio-reactive effects do not wait for the catalog-sized state payload.
+The runner renders frames at a fast cadence from cached emulator state. WLED state still refreshes by HTTP because it is comparatively large and low-rate; audio arrives over the `/api/emulator/frames` typed WebSocket bus as `audio` messages, with `GET /api/emulator/audio` only used when the WebSocket is unavailable.
 
-Frames include a runner stream ID and a monotonically increasing frame number. The runner streams them over `/api/emulator/frames` when possible and falls back to HTTP POSTs; the server ignores stale frames within the same stream so delayed older data cannot overwrite newer LED data, while still accepting fresh frames after runner restarts.
+Frames include a runner stream ID and a monotonically increasing frame number. The runner streams typed `frame` messages over `/api/emulator/frames` when possible and falls back to HTTP POSTs; the server ignores stale frames within the same stream so delayed older data cannot overwrite newer LED data, while still accepting fresh frames after runner restarts.
+
+Audio messages also carry `updatedAt`; the runner treats audio as silent when it has not seen a fresh update recently, so a closed browser source or one-off test payload cannot keep driving audio-reactive effects indefinitely.
 
 The native process emits compact flat RGB hex lines to stdout. The runner preserves that compact RGB representation over the browser WebSocket instead of expanding every frame into nested arrays; the emulator UI decodes the flat RGB frame immediately before painting.
 

@@ -28,7 +28,8 @@ export function connect() {
 function connectFrameStream(protocol) {
   model.frameWs = new WebSocket(`${protocol}//${location.host}/api/emulator/frames`);
   model.frameWs.onmessage = (event) => {
-    updateFromEmulatorFrame(JSON.parse(event.data));
+    const message = JSON.parse(event.data);
+    if (message?.type === "frame") updateFromEmulatorFrame(message);
   };
   model.frameWs.onclose = () => {
     setTimeout(() => connectFrameStream(protocol), 1000);

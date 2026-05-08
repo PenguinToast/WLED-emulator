@@ -2,12 +2,13 @@ import { join } from "node:path";
 import { existsSync } from "node:fs";
 
 import { builtEmulatorDir, builtEmulatorHtmlDir, emulatorDir, wledDir } from "./config.js";
+import { updateAudioState } from "./audio-state.js";
 import { applyStateUpdate, renderPreviewLeds } from "./device-state.js";
 import { serveViteAsset, transformHtml } from "./dev.js";
 import { paletteData, palettes } from "./palettes.js";
 import { presetsJson } from "./presets.js";
 import { htmlFile, json, readJsonBody, serveFile, serveStatic, text } from "./responses.js";
-import { clamp, clone } from "./util.js";
+import { clone } from "./util.js";
 import { applyUpload, isVersionInfoRequest } from "./version-info.js";
 import { broadcast, externalFrameLedCount, updateExternalFrame } from "./websocket.js";
 import { emulatorStateJson, fullJson, infoObject, siJson } from "./wled-json.js";
@@ -57,19 +58,7 @@ export async function handleHttp(req, res, ctx, options: HttpOptions = {}) {
       return text(res, ok ? "OK" : "Unsupported upload", ok ? 200 : 400);
     }
     if (url.pathname === "/api/emulator/audio" && req.method === "POST") {
-      const body = await readJsonBody(req);
-      const bins = Array.isArray(body?.bins) ? body.bins.slice(0, 16).map((value) => clamp(Number(value ?? 0), 0, 1)) : ctx.audio.bins;
-      while (bins.length < 16) bins.push(0);
-      Object.assign(ctx.audio, {
-        volume: clamp(Number(body?.volume ?? 0), 0, 1),
-        bass: clamp(Number(body?.bass ?? 0), 0, 1),
-        mid: clamp(Number(body?.mid ?? 0), 0, 1),
-        treble: clamp(Number(body?.treble ?? 0), 0, 1),
-        beat: Boolean(body?.beat),
-        bpm: clamp(Number(body?.bpm ?? 0), 0, 300),
-        bins,
-        updatedAt: Date.now(),
-      });
+      updateAudioState(ctx, await readJsonBody(req));
       return json(res, { ok: true });
     }
     if (url.pathname === "/api/emulator/audio") return json(res, ctx.audio);
