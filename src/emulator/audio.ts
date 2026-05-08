@@ -122,7 +122,7 @@ export function updateAudio() {
 let lastAudioPost = 0;
 export function postAudio(now) {
   if (!audio.analyser || !audio.source) return;
-  if (now - lastAudioPost < 50) return;
+  if (now === lastAudioPost) return;
   lastAudioPost = now;
   sendAudioPayload();
 }

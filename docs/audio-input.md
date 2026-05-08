@@ -18,7 +18,7 @@ All sources feed the same analyzer, so WLED audio-reactive effects receive the s
 - BPM estimate
 - 16 analyzer bins
 
-The browser streams this audio state around 20 times per second on the same WebSocket used for native RGB frames. The C++ runner receives those audio messages from the frame bus and only falls back to `GET /api/emulator/audio` when the WebSocket is unavailable.
+The browser streams this audio state once per animation frame, typically around 60 times per second, on the same WebSocket used for native RGB frames. The C++ runner receives those audio messages from the frame bus and only falls back to `GET /api/emulator/audio` when the WebSocket is unavailable.
 
 ## Browser Capture Notes
 
