@@ -37,21 +37,6 @@ void* audioValues[9] = {
   fftBin,
 };
 um_data_t hostAudioData{9, audioTypes, audioValues};
-
-float estimateMajorPeak(const AudioData& audio) {
-  float peak = 0.0f;
-  uint8_t peakIndex = 0;
-  for (uint8_t i = 0; i < 16; i += 1) {
-    if (audio.bins[i] > peak) {
-      peak = audio.bins[i];
-      peakIndex = i;
-    }
-  }
-  if (peak <= 0.0f) return 0.0f;
-  constexpr float minFrequency = 60.0f;
-  constexpr float maxFrequency = 11025.0f;
-  return minFrequency * std::pow(maxFrequency / minFrequency, (peakIndex + 0.5f) / 16.0f);
-}
 }
 
 uint32_t millis() {
@@ -205,12 +190,11 @@ void prepareWledFrame(EffectContext& ctx) {
   volumeRaw = clamp8(ctx.audio.volume * 512.0f);
   samplePeakByte = ctx.audio.beat ? 1 : 0;
   samplePeak = samplePeakByte != 0;
-  FFT_MajorPeak = std::max(1.0f, ctx.audio.majorPeak > 0.0f ? ctx.audio.majorPeak : estimateMajorPeak(ctx.audio));
-  my_magnitude = constrain((volumeSmth * 3.0f) + (ctx.audio.bass * 256.0f), 0.0f, 1024.0f);
+  FFT_MajorPeak = std::max(1.0f, ctx.audio.majorPeak > 0.0f ? ctx.audio.majorPeak : 1.0f);
+  my_magnitude = constrain(ctx.audio.magnitude * 1024.0f, 0.001f, 1024.0f);
   for (uint8_t i = 0; i < 16; i += 1) {
-    const float band = i < 5 ? ctx.audio.bass : (i < 11 ? ctx.audio.mid : ctx.audio.treble);
-    const float bin = ctx.audio.bins[i] > 0.0f ? ctx.audio.bins[i] : band;
-    fftResult[i] = clamp8(std::sqrt(constrain(bin, 0.0f, 1.0f)) * 255.0f);
+    const float bin = constrain(ctx.audio.bins[i], 0.0f, 1.0f);
+    fftResult[i] = clamp8(bin * 255.0f);
     fftBin[i] = bin * 4096.0f;
   }
 }

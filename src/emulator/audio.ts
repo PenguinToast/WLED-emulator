@@ -6,6 +6,37 @@ type DisplayAudioConstraints = MediaTrackConstraints & {
   suppressLocalAudioPlayback?: boolean;
 };
 
+const WLED_SAMPLE_RATE = 22050;
+const WLED_FFT_SAMPLES = 512;
+const WLED_HZ_PER_BIN = WLED_SAMPLE_RATE / WLED_FFT_SAMPLES;
+const WLED_ANALYZER_GAIN = 384;
+const WLED_FFT_DOWNSCALE = 0.46;
+const WLED_MANUAL_GAIN = 60 / 40 + 1 / 16;
+const WLED_PINK = [
+  1.7, 1.71, 1.73, 1.78,
+  1.68, 1.56, 1.55, 1.63,
+  1.79, 1.62, 1.8, 2.06,
+  2.47, 3.35, 6.83, 9.55,
+];
+const WLED_BANDS = [
+  [1, 2, 1],
+  [2, 3, 1],
+  [3, 5, 1],
+  [5, 7, 1],
+  [7, 10, 1],
+  [10, 13, 1],
+  [13, 19, 1],
+  [19, 26, 1],
+  [26, 33, 1],
+  [33, 44, 1],
+  [44, 56, 1],
+  [56, 70, 1],
+  [70, 86, 1],
+  [86, 104, 1],
+  [104, 165, 0.88],
+  [165, 215, 0.7],
+];
+
 export async function startMic() {
   try {
     await ensureAudioContext();
@@ -75,6 +106,9 @@ export function stopAudio() {
   audio.volume = audio.bass = audio.mid = audio.treble = audio.bpm = 0;
   audio.beat = false;
   audio.bins.fill(0);
+  audio.fftAvg.fill(0);
+  audio.majorPeak = 0;
+  audio.magnitude = 0;
   sendAudioPayload();
 }
 
@@ -100,32 +134,7 @@ export function updateAudio() {
   audio.bass = rangeAverage(20, 180);
   audio.mid = rangeAverage(180, 2200);
   audio.treble = rangeAverage(2200, 9000);
-  const minFrequency = 60;
-  const maxFrequency = Math.min(11025, nyquist);
-  let peakMagnitude = 0;
-  let peakFrequency = 0;
-  const compensatedMagnitude = (index) => {
-    const frequency = Math.max(minFrequency, (index + 0.5) * hzPerBin);
-    const tilt = clamp((frequency / 1000) ** 0.28, 0.55, 2.2);
-    return clamp((audio.freqData[index] / 255) * tilt, 0, 1);
-  };
-  for (let i = 0; i < audio.bins.length; i += 1) {
-    const fromHz = minFrequency * (maxFrequency / minFrequency) ** (i / audio.bins.length);
-    const toHz = minFrequency * (maxFrequency / minFrequency) ** ((i + 1) / audio.bins.length);
-    const start = Math.max(1, Math.floor(fromHz / hzPerBin));
-    const end = Math.min(audio.freqData.length - 1, Math.max(start + 1, Math.ceil(toHz / hzPerBin)));
-    let sum = 0;
-    for (let j = start; j < end; j += 1) {
-      const magnitude = compensatedMagnitude(j);
-      sum += magnitude;
-      if (magnitude > peakMagnitude) {
-        peakMagnitude = magnitude;
-        peakFrequency = (j + 0.5) * hzPerBin;
-      }
-    }
-    audio.bins[i] = sum / (end - start);
-  }
-  audio.majorPeak = peakMagnitude > 0.03 ? peakFrequency : 0;
+  updateWledFftBins(hzPerBin, nyquist);
   const now = performance.now();
   audio.beatEnergy = mix(audio.beatEnergy, audio.bass + audio.volume * 0.45, 0.08);
   audio.beat = audio.bass + audio.volume * 0.45 > audio.beatEnergy * 1.55 && now - audio.lastBeatAt > 230;
@@ -157,6 +166,7 @@ function sendAudioPayload() {
     beat: audio.beat,
     bpm: audio.bpm,
     majorPeak: audio.majorPeak,
+    magnitude: audio.magnitude,
     bins: Array.from(audio.bins.slice(0, 16)),
   };
   if (model.frameWs?.readyState === WebSocket.OPEN) {
@@ -172,6 +182,58 @@ function sendAudioPayload() {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
   }).catch(() => {});
+}
+
+function updateWledFftBins(hzPerBin, nyquist) {
+  let peakMagnitude = 0;
+  let peakFrequency = 0;
+  const highestWledBin = Math.min(215, Math.floor(nyquist / WLED_HZ_PER_BIN));
+  const peakEnd = Math.min(audio.freqData.length - 1, Math.ceil(((highestWledBin + 1) * WLED_HZ_PER_BIN) / hzPerBin));
+  for (let index = 1; index <= peakEnd; index += 1) {
+    const magnitude = audio.freqData[index] / 255;
+    if (magnitude > peakMagnitude) {
+      peakMagnitude = magnitude;
+      peakFrequency = (index + 0.5) * hzPerBin;
+    }
+  }
+
+  audio.majorPeak = peakMagnitude > 0.03 ? clamp(peakFrequency, 1, 11025) : 0;
+  audio.magnitude = peakMagnitude;
+
+  const noiseGateOpen = audio.volume > 0.01 || peakMagnitude > 0.03;
+  for (let index = 0; index < WLED_BANDS.length; index += 1) {
+    const [fromBin, toBin, damping] = WLED_BANDS[index];
+    let fftCalc = noiseGateOpen
+      ? averageWledBinRange(fromBin, toBin, hzPerBin) * WLED_ANALYZER_GAIN * damping
+      : 0;
+
+    if (noiseGateOpen) {
+      fftCalc *= WLED_PINK[index] * WLED_FFT_DOWNSCALE * WLED_MANUAL_GAIN;
+      fftCalc = clamp(fftCalc, 0, 1023);
+    }
+
+    if (fftCalc > audio.fftAvg[index]) {
+      audio.fftAvg[index] = fftCalc * 0.75 + audio.fftAvg[index] * 0.25;
+    } else {
+      audio.fftAvg[index] = fftCalc * 0.17 + audio.fftAvg[index] * 0.83;
+    }
+    audio.fftAvg[index] = clamp(audio.fftAvg[index], 0, 1023);
+
+    let currentResult = audio.fftAvg[index] * 0.38 - 6;
+    currentResult = currentResult > 1 ? Math.sqrt(currentResult) : 0;
+    currentResult *= 0.85 + index / 4.5;
+    audio.bins[index] = clamp((currentResult / 16) * 255, 0, 255) / 255;
+  }
+}
+
+function averageWledBinRange(fromBin, toBin, hzPerBin) {
+  const fromHz = fromBin * WLED_HZ_PER_BIN;
+  const toHz = (toBin + 1) * WLED_HZ_PER_BIN;
+  const from = Math.max(1, Math.floor(fromHz / hzPerBin));
+  const to = Math.min(audio.freqData.length - 1, Math.max(from, Math.ceil(toHz / hzPerBin)));
+  let sum = 0;
+  for (let index = from; index <= to; index += 1) sum += audio.freqData[index] / 255;
+  return sum / Math.max(1, to - from + 1);
 }
 
 async function ensureAudioContext() {

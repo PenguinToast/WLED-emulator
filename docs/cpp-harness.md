@@ -77,16 +77,16 @@ The JSON effect catalog is derived from the generated native dispatch table. Uns
 
 The server consumes `upstream_fx_1d_modes.json` for this supported-mode contract. Keep that as the boundary between native generation and WLED protocol serving; server modules should not inspect generated C++ headers or source files.
 
-The host shim implements `UsermodManager::getUMData()` for `USERMOD_ID_AUDIOREACTIVE` and feeds the upstream `um_data_t` fields from emulator audio. Browser audio values arrive normalized from `0.0` to `1.0`; the shim applies a simple AGC-style square-root curve for `volumeSmth` so short ring segments still move under normal music levels. `FFT_MajorPeak` comes from the browser analyzer's compensated peak frequency, with a fallback estimate from the 16 log-spaced FFT bins.
+The host shim implements `UsermodManager::getUMData()` for `USERMOD_ID_AUDIOREACTIVE` and feeds the upstream `um_data_t` fields from emulator audio. Browser audio values arrive normalized from `0.0` to `1.0`; the shim applies a simple AGC-style square-root curve for `volumeSmth` so short ring segments still move under normal music levels. The browser audio analyzer now emits WLED-shaped `fftResult` bins directly, using WLED's fixed GEQ ranges, pink-noise compensation, smoothing, and square-root scaling. The shim maps those normalized values to bytes without adding another curve, so C++ audio-reactive effects consume the same kind of `fftResult[16]` they read in WLED.
 
 - `u_data[0]`: smoothed volume, `volumeSmth`
 - `u_data[1]`: raw volume, `volumeRaw`
-- `u_data[2]`: 16-bin FFT byte array, `fftResult`, derived from browser analyzer bins
+- `u_data[2]`: 16-bin FFT byte array, `fftResult`, derived from browser analyzer bins after WLED-style post-processing
 - `u_data[3]`: beat flag, `samplePeak`
 - `u_data[4]`: dominant frequency estimate, `FFT_MajorPeak`
 - `u_data[5]`: FFT magnitude estimate, `my_magnitude`
 - `u_data[6]` and `u_data[7]`: mutable `maxVol` and `binNum` controls used by several SR effects
-- `u_data[8]`: float FFT bin array, `fftBin`, derived from browser analyzer bins
+- `u_data[8]`: float FFT bin array, `fftBin`, derived from the normalized WLED-style `fftResult` bins
 
 Modes that require WLED's 2D matrix renderer are still intentionally skipped in the generated dispatch until the host fixture grows matrix geometry.
 

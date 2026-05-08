@@ -22,6 +22,7 @@ export const audio = {
   stream: null,
   timeData: new Uint8Array(2048),
   freqData: new Uint8Array(1024),
+  fftAvg: new Float32Array(16),
   bins: new Float32Array(16),
   volume: 0,
   bass: 0,
@@ -32,6 +33,7 @@ export const audio = {
   lastBeatAt: 0,
   bpm: 0,
   majorPeak: 0,
+  magnitude: 0,
 };
 
 export function activeSegment() {

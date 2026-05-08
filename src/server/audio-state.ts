@@ -13,6 +13,7 @@ export function updateAudioState(ctx, value) {
     beat: Boolean(value?.beat),
     bpm: clamp(Number(value?.bpm ?? 0), 0, 300),
     majorPeak: clamp(Number(value?.majorPeak ?? 0), 0, 11025),
+    magnitude: clamp(Number(value?.magnitude ?? 0), 0, 1),
     bins,
     source: String(value?.source || "browser"),
     updatedAt: Date.now(),
@@ -31,6 +32,7 @@ export function audioMessage(audio) {
     beat: audio.beat,
     bpm: audio.bpm,
     majorPeak: audio.majorPeak,
+    magnitude: audio.magnitude,
     bins: audio.bins,
     updatedAt: audio.updatedAt,
   };

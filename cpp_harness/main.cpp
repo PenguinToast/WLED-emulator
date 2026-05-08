@@ -45,6 +45,7 @@ int main() {
                   >> beat
                   >> ctx.audio.bpm
                   >> ctx.audio.majorPeak
+                  >> ctx.audio.magnitude
                   >> binCount) {
     ctx.audio.beat = beat != 0;
     ctx.audio.bins.fill(0.0f);
