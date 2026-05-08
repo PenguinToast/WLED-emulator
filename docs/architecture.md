@@ -4,30 +4,32 @@ This project runs the real WLED browser UI and mobile-app protocol against a loc
 
 ## Runtime Flow
 
-1. `server.mjs` creates one app context and starts the HTTP server.
-2. `src/server/http.mjs` serves WLED-compatible JSON endpoints, vendored WLED UI assets, emulator pages, and frame/audio bridge endpoints.
-3. `src/server/websocket.mjs` handles the raw WLED WebSocket connection used by the WLED UI.
-4. `public/emulator/main.js` starts the browser-side emulator application.
-5. `public/emulator/js/transport.js` watches server state over HTTP polling and WebSocket updates.
-6. `public/emulator/js/audio.js` analyzes mic or audio-file input and posts normalized audio bands to the server.
-7. `public/emulator/js/effects.js` renders browser fallback frames unless an external C++ frame stream is active.
-8. `tools/generate-upstream-fx.mjs` extracts the supported upstream native effects and writes C++ sources plus a JSON support manifest.
-9. `tools/run-cpp-effect.mjs` can compile and run the C++ harness, then stream RGB frames back into `/api/emulator/frame`.
+1. `server.ts` creates one app context and starts the HTTP server.
+2. In development, `src/server/dev.ts` attaches Vite middleware and injects the Vite client into served HTML.
+3. `src/server/http.ts` serves WLED-compatible JSON endpoints, vendored WLED UI assets, emulator pages, and frame/audio bridge endpoints.
+4. `src/server/websocket.ts` handles the raw WLED WebSocket connection used by the WLED UI.
+5. `public/emulator/main.js` starts the browser-side emulator application.
+6. `public/emulator/js/transport.js` watches server state over HTTP polling and WebSocket updates.
+7. `public/emulator/js/audio.js` analyzes mic or audio-file input and posts normalized audio bands to the server.
+8. `public/emulator/js/effects.js` renders browser fallback frames unless an external C++ frame stream is active.
+9. `tools/generate-upstream-fx.mjs` extracts the supported upstream native effects and writes C++ sources plus a JSON support manifest.
+10. `tools/run-cpp-effect.mjs` can compile and run the C++ harness, then stream RGB frames back into `/api/emulator/frame`.
 
 ## Server Modules
 
-- `src/server/config.mjs`: filesystem paths and port.
-- `src/server/context.mjs`: process-local emulator state container.
-- `src/server/fixture.mjs`: daisy-chained ring geometry and default segment layout.
-- `src/server/wled-catalog.mjs`: parser for vendored WLED effect metadata and consumer of the generated native-support manifest.
-- `src/server/device-state.mjs`: WLED state creation, patch application, normalization, and live-preview LEDs.
-- `src/server/wled-json.mjs`: WLED-compatible JSON payloads.
-- `src/server/http.mjs`: route table and endpoint behavior.
-- `src/server/websocket.mjs`: WebSocket handshake, frame encoding/decoding, and state broadcast.
-- `src/server/palettes.mjs`: emulator palette names and RGB lookup data.
-- `src/server/responses.mjs`: JSON/text/static file response helpers.
-- `src/server/presets.mjs`: small preset payload served at `/presets.json`.
-- `src/server/version-info.mjs`: minimal WLED UI version-info file emulation for the install/upgrade prompt.
+- `src/server/config.ts`: filesystem paths, port, and emulator version.
+- `src/server/context.ts`: process-local emulator state container.
+- `src/server/dev.ts`: Vite middleware and HTML transform helpers for development hot reload.
+- `src/server/fixture.ts`: daisy-chained ring geometry and default segment layout.
+- `src/server/wled-catalog.ts`: parser for vendored WLED effect metadata and consumer of the generated native-support manifest.
+- `src/server/device-state.ts`: WLED state creation, patch application, normalization, and live-preview LEDs.
+- `src/server/wled-json.ts`: WLED-compatible JSON payloads.
+- `src/server/http.ts`: route table and endpoint behavior.
+- `src/server/websocket.ts`: WebSocket handshake, frame encoding/decoding, and state broadcast.
+- `src/server/palettes.ts`: emulator palette names and RGB lookup data.
+- `src/server/responses.ts`: JSON/text/static file response helpers.
+- `src/server/presets.ts`: small preset payload served at `/presets.json`.
+- `src/server/version-info.ts`: minimal WLED UI version-info file emulation for the install/upgrade prompt.
 
 ## Browser Modules
 
@@ -49,7 +51,7 @@ The native renderer owns effect execution. `tools/generate-upstream-fx.mjs` read
 - `upstream_fx_1d.hpp`: C++ dispatch table for the native harness.
 - `upstream_fx_1d_modes.json`: server-readable support manifest.
 
-Server code must not parse generated C++ to infer support. `src/server/wled-catalog.mjs` uses the JSON manifest to expose supported effect slots and marks unsupported official slots as `RSVD`, preserving WLED mode IDs while keeping the UI away from native-unimplemented modes.
+Server code must not parse generated C++ to infer support. `src/server/wled-catalog.ts` uses the JSON manifest to expose supported effect slots and marks unsupported official slots as `RSVD`, preserving WLED mode IDs while keeping the UI away from native-unimplemented modes.
 
 ## Documentation Rule
 

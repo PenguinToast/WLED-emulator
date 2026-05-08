@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { rootDir, vendorWledDir } from "./config.mjs";
+import { rootDir, vendorWledDir } from "./config.js";
 
 const OFFICIAL_EFFECT_SLOTS = 187;
 export const HOST_CUSTOM_EFFECT_ID = 187;

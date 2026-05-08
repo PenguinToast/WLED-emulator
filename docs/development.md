@@ -3,17 +3,18 @@
 ## Commands
 
 ```sh
+npm run dev
 npm start
 npm run cpp:run
 ```
 
+`npm run dev` starts the TypeScript server through `tsx watch` and enables Vite middleware for browser hot reload. `npm start` runs the same TypeScript entrypoint without watch mode.
+
 Useful checks after refactors:
 
 ```sh
-node --check server.mjs
-node --check src/server/http.mjs
-node --check src/server/device-state.mjs
-node --check src/server/wled-catalog.mjs
+npm run typecheck
+npm run build
 node --check public/emulator/main.js
 node tools/generate-upstream-fx.mjs
 c++ -std=c++17 -O2 -Icpp_harness cpp_harness/main.cpp cpp_harness/custom_effect.cpp cpp_harness/wled_compat.cpp cpp_harness/generated/upstream_fx_1d.cpp -o /tmp/edc-wled-cpp-effect
@@ -44,8 +45,8 @@ The main active entry points are:
 - Emulator UI: `http://localhost:5173/emulator`
 - Lightweight liveview: `http://localhost:5173/liveview`
 
-The old standalone custom-effect prototype is intentionally kept in `legacy/standalone-prototype/` and is not served by `server.mjs`.
+The old standalone custom-effect prototype is intentionally kept in `legacy/standalone-prototype/` and is not served by `server.ts`.
 
 ## Refactor Boundaries
 
-Prefer keeping WLED protocol behavior in `src/server/`, virtual-output UI behavior in `public/emulator/js/`, native effect work in `cpp_harness/`, generated native artifacts in `cpp_harness/generated/`, automation/bridge scripts in `tools/`, and architectural explanations in `docs/`.
+Prefer keeping WLED protocol behavior in `src/server/`, development server wiring in `src/server/dev.ts`, virtual-output UI behavior in `public/emulator/js/`, native effect work in `cpp_harness/`, generated native artifacts in `cpp_harness/generated/`, automation/bridge scripts in `tools/`, and architectural explanations in `docs/`.

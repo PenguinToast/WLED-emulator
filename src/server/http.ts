@@ -1,17 +1,23 @@
 import { join } from "node:path";
 
-import { emulatorDir, wledDir } from "./config.mjs";
-import { applyStateUpdate, renderPreviewLeds } from "./device-state.mjs";
-import { paletteData, palettes } from "./palettes.mjs";
-import { presetsJson } from "./presets.mjs";
-import { json, readJsonBody, serveFile, serveStatic, text } from "./responses.mjs";
-import { clamp, clone } from "./util.mjs";
-import { applyUpload, isVersionInfoRequest } from "./version-info.mjs";
-import { broadcast } from "./websocket.mjs";
-import { emulatorStateJson, fullJson, infoObject, siJson } from "./wled-json.mjs";
+import { emulatorDir, wledDir } from "./config.js";
+import { applyStateUpdate, renderPreviewLeds } from "./device-state.js";
+import { serveViteAsset, transformHtml } from "./dev.js";
+import { paletteData, palettes } from "./palettes.js";
+import { presetsJson } from "./presets.js";
+import { htmlFile, json, readJsonBody, serveFile, serveStatic, text } from "./responses.js";
+import { clamp, clone } from "./util.js";
+import { applyUpload, isVersionInfoRequest } from "./version-info.js";
+import { broadcast } from "./websocket.js";
+import { emulatorStateJson, fullJson, infoObject, siJson } from "./wled-json.js";
 
-export async function handleHttp(req, res, ctx) {
+type HttpOptions = {
+  devServer?: Parameters<typeof serveViteAsset>[0];
+};
+
+export async function handleHttp(req, res, ctx, options: HttpOptions = {}) {
   const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+  if (await serveViteAsset(options.devServer, req, res)) return;
 
   if (req.method === "OPTIONS") {
     res.writeHead(204, {
@@ -72,10 +78,16 @@ export async function handleHttp(req, res, ctx) {
       return json(res, { ok: true, count: ctx.externalFrame.leds.length });
     }
     if (url.pathname === "/api/emulator/state") return json(res, emulatorStateJson(ctx));
-    if (url.pathname === "/emulator" || url.pathname === "/emulator/") return serveFile(res, join(emulatorDir, "index.html"));
+    if (url.pathname === "/emulator" || url.pathname === "/emulator/") {
+      return htmlFile(res, join(emulatorDir, "index.html"), (html) => transformHtml(options.devServer, url.pathname, html));
+    }
     if (url.pathname.startsWith("/emulator/")) return serveStatic(res, emulatorDir, url.pathname.replace(/^\/emulator\//, ""));
-    if (url.pathname === "/liveview" || url.pathname === "/liveview2D") return serveFile(res, join(emulatorDir, "liveview.html"));
-    if (url.pathname === "/" || url.pathname === "/index.htm") return serveFile(res, join(wledDir, "index.htm"));
+    if (url.pathname === "/liveview" || url.pathname === "/liveview2D") {
+      return htmlFile(res, join(emulatorDir, "liveview.html"), (html) => transformHtml(options.devServer, url.pathname, html));
+    }
+    if (url.pathname === "/" || url.pathname === "/index.htm") {
+      return htmlFile(res, join(wledDir, "index.htm"), (html) => transformHtml(options.devServer, url.pathname, html));
+    }
     if (["/index.css", "/index.js", "/iro.js", "/rangetouch.js"].includes(url.pathname)) {
       return serveFile(res, join(wledDir, url.pathname.slice(1)));
     }

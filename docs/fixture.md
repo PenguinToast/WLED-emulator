@@ -14,9 +14,8 @@ The emulator models the LED hardware as seven daisy-chained rings. The physical 
 
 Total LED count: 133.
 
-The authoritative fixture constants live in `src/server/fixture.mjs`. Browser rendering uses `state.seg` from the WLED JSON state, so changing the server fixture changes the visible emulator layout without duplicating ring counts in the browser.
+The authoritative fixture constants live in `src/server/fixture.ts`. Browser rendering uses `state.seg` from the WLED JSON state, so changing the server fixture changes the visible emulator layout without duplicating ring counts in the browser.
 
 ## Segment Defaults
 
 Every ring segment starts selected, enabled, and set to WLED mode `9` (`Rainbow`) with palette `1` (`Aurora`). WLED UI updates can address a specific segment by `id`, or apply a segment object to all currently selected segments.
-

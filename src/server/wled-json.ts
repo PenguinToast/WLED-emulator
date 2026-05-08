@@ -1,7 +1,7 @@
-import { fixtureMetadata } from "./fixture.mjs";
-import { paletteData, palettes } from "./palettes.mjs";
-import { clone } from "./util.mjs";
-import { emulatorVersion } from "./config.mjs";
+import { fixtureMetadata } from "./fixture.js";
+import { paletteData, palettes } from "./palettes.js";
+import { clone } from "./util.js";
+import { emulatorVersion } from "./config.js";
 
 export function infoObject(ctx) {
   const uptime = Math.floor((Date.now() - ctx.startedAt) / 1000);

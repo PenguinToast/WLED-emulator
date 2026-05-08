@@ -1,4 +1,5 @@
 import { createReadStream, existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 
 export function json(res, value, status = 200) {
@@ -18,6 +19,13 @@ export function text(res, body, status = 200, type = "text/plain; charset=utf-8"
     "access-control-allow-origin": "*",
   });
   res.end(body);
+}
+
+export async function htmlFile(res, filePath, transform = null) {
+  if (!existsSync(filePath)) return text(res, "Not found", 404);
+  const raw = await readFile(filePath, "utf8");
+  const body = transform ? await transform(raw) : raw;
+  return text(res, body, 200, "text/html; charset=utf-8");
 }
 
 export async function readJsonBody(req) {
@@ -48,4 +56,3 @@ function mimeType(filePath) {
     ".svg": "image/svg+xml",
   }[extname(filePath)] || "application/octet-stream";
 }
-

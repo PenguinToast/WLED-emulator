@@ -1,6 +1,6 @@
-import { createInitialState, normalizeState } from "./device-state.mjs";
-import { createInitialVersionInfo } from "./version-info.mjs";
-import { loadOfficialWledEffects } from "./wled-catalog.mjs";
+import { createInitialState, normalizeState } from "./device-state.js";
+import { createInitialVersionInfo } from "./version-info.js";
+import { loadOfficialWledEffects } from "./wled-catalog.js";
 
 export function createAppContext() {
   const catalog = loadOfficialWledEffects();

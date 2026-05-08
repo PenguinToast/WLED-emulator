@@ -13,6 +13,14 @@ This project runs the real WLED web UI against a local WLED-compatible protocol 
 
 ## Run
 
+For hot reloading during development:
+
+```sh
+npm run dev
+```
+
+For a normal local server:
+
 ```sh
 npm start
 ```

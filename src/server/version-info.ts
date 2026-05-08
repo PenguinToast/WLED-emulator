@@ -1,4 +1,4 @@
-import { emulatorVersion } from "./config.mjs";
+import { emulatorVersion } from "./config.js";
 
 const VERSION_INFO_PATH = "/version-info.json";
 

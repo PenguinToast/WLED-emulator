@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
-import { applyStateUpdate, renderPreviewLeds } from "./device-state.mjs";
-import { siJson } from "./wled-json.mjs";
+import { applyStateUpdate, renderPreviewLeds } from "./device-state.js";
+import { siJson } from "./wled-json.js";
 
 export function handleUpgrade(req, socket, ctx) {
   if (new URL(req.url, `http://${req.headers.host || "localhost"}`).pathname !== "/ws") {

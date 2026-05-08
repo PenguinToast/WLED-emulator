@@ -1,6 +1,6 @@
-import { createRingSegments, ringNames } from "./fixture.mjs";
-import { palettes } from "./palettes.mjs";
-import { clampInt, clone, deepMerge } from "./util.mjs";
+import { createRingSegments, ringNames } from "./fixture.js";
+import { palettes } from "./palettes.js";
+import { clampInt, clone, deepMerge } from "./util.js";
 
 export function createInitialState() {
   return {
