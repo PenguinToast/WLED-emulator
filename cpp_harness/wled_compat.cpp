@@ -3,9 +3,41 @@
 HostStrip strip;
 AudioData audioData;
 float volumeSmth = 0.0f;
+uint16_t volumeRaw = 0;
 float FFT_MajorPeak = 0.0f;
+float my_magnitude = 0.0f;
 bool samplePeak = false;
+uint8_t samplePeakByte = 0;
 uint8_t fftResult[16] = {};
+float fftBin[16] = {};
+uint8_t maxVol = 31;
+uint8_t binNum = 8;
+
+namespace {
+um_types_t audioTypes[9] = {
+  UMT_FLOAT,
+  UMT_UINT16,
+  UMT_BYTE_ARR,
+  UMT_BYTE,
+  UMT_FLOAT,
+  UMT_FLOAT,
+  UMT_BYTE,
+  UMT_BYTE,
+  UMT_FLOAT_ARR,
+};
+void* audioValues[9] = {
+  &volumeSmth,
+  &volumeRaw,
+  fftResult,
+  &samplePeakByte,
+  &FFT_MajorPeak,
+  &my_magnitude,
+  &maxVol,
+  &binNum,
+  fftBin,
+};
+um_data_t hostAudioData{9, audioTypes, audioValues};
+}
 
 uint32_t millis() {
   return strip.now;
@@ -13,6 +45,16 @@ uint32_t millis() {
 
 uint32_t micros() {
   return strip.now * 1000U;
+}
+
+bool UsermodManager::getUMData(um_data_t** umData, uint8_t modId) {
+  if (modId != USERMOD_ID_AUDIOREACTIVE) return false;
+  if (umData) *umData = &hostAudioData;
+  return true;
+}
+
+um_data_t* simulateSound(uint8_t) {
+  return &hostAudioData;
 }
 
 void HostStrip::selectSegment(uint8_t id) {
@@ -125,11 +167,16 @@ void prepareWledFrame(EffectContext& ctx) {
   strip.brightness = ctx.segment.brightness;
   audioData = ctx.audio;
   volumeSmth = constrain(ctx.audio.volume * 255.0f, 0.0f, 255.0f);
-  samplePeak = ctx.audio.beat;
-  FFT_MajorPeak = 80.0f + ctx.audio.treble * 4200.0f;
+  volumeRaw = clamp8(ctx.audio.volume * 255.0f);
+  samplePeakByte = ctx.audio.beat ? 1 : 0;
+  samplePeak = samplePeakByte != 0;
+  const float weightedFrequency = ctx.audio.bass * 180.0f + ctx.audio.mid * 1200.0f + ctx.audio.treble * 5200.0f;
+  FFT_MajorPeak = std::max(1.0f, 60.0f + weightedFrequency);
+  my_magnitude = constrain((ctx.audio.volume * 768.0f) + (ctx.audio.bass * 192.0f), 0.0f, 1024.0f);
   for (uint8_t i = 0; i < 16; i += 1) {
     const float band = i < 5 ? ctx.audio.bass : (i < 11 ? ctx.audio.mid : ctx.audio.treble);
     fftResult[i] = clamp8(band * 255.0f);
+    fftBin[i] = band * 4096.0f;
   }
 }
 

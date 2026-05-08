@@ -1,0 +1,719 @@
+{
+  "generatedFrom": "vendor/wled-0.15.4/wled00/FX.cpp",
+  "excludes": [
+    "2D/matrix modes"
+  ],
+  "modeCount": 142,
+  "modes": [
+    {
+      "id": 0,
+      "name": "FX_MODE_STATIC",
+      "function": "mode_static"
+    },
+    {
+      "id": 1,
+      "name": "FX_MODE_BLINK",
+      "function": "mode_blink"
+    },
+    {
+      "id": 2,
+      "name": "FX_MODE_BREATH",
+      "function": "mode_breath"
+    },
+    {
+      "id": 3,
+      "name": "FX_MODE_COLOR_WIPE",
+      "function": "mode_color_wipe"
+    },
+    {
+      "id": 4,
+      "name": "FX_MODE_COLOR_WIPE_RANDOM",
+      "function": "mode_color_wipe_random"
+    },
+    {
+      "id": 5,
+      "name": "FX_MODE_RANDOM_COLOR",
+      "function": "mode_random_color"
+    },
+    {
+      "id": 6,
+      "name": "FX_MODE_COLOR_SWEEP",
+      "function": "mode_color_sweep"
+    },
+    {
+      "id": 7,
+      "name": "FX_MODE_DYNAMIC",
+      "function": "mode_dynamic"
+    },
+    {
+      "id": 8,
+      "name": "FX_MODE_RAINBOW",
+      "function": "mode_rainbow"
+    },
+    {
+      "id": 9,
+      "name": "FX_MODE_RAINBOW_CYCLE",
+      "function": "mode_rainbow_cycle"
+    },
+    {
+      "id": 10,
+      "name": "FX_MODE_SCAN",
+      "function": "mode_scan"
+    },
+    {
+      "id": 11,
+      "name": "FX_MODE_DUAL_SCAN",
+      "function": "mode_dual_scan"
+    },
+    {
+      "id": 12,
+      "name": "FX_MODE_FADE",
+      "function": "mode_fade"
+    },
+    {
+      "id": 13,
+      "name": "FX_MODE_THEATER_CHASE",
+      "function": "mode_theater_chase"
+    },
+    {
+      "id": 14,
+      "name": "FX_MODE_THEATER_CHASE_RAINBOW",
+      "function": "mode_theater_chase_rainbow"
+    },
+    {
+      "id": 15,
+      "name": "FX_MODE_RUNNING_LIGHTS",
+      "function": "mode_running_lights"
+    },
+    {
+      "id": 16,
+      "name": "FX_MODE_SAW",
+      "function": "mode_saw"
+    },
+    {
+      "id": 17,
+      "name": "FX_MODE_TWINKLE",
+      "function": "mode_twinkle"
+    },
+    {
+      "id": 18,
+      "name": "FX_MODE_DISSOLVE",
+      "function": "mode_dissolve"
+    },
+    {
+      "id": 19,
+      "name": "FX_MODE_DISSOLVE_RANDOM",
+      "function": "mode_dissolve_random"
+    },
+    {
+      "id": 20,
+      "name": "FX_MODE_SPARKLE",
+      "function": "mode_sparkle"
+    },
+    {
+      "id": 21,
+      "name": "FX_MODE_FLASH_SPARKLE",
+      "function": "mode_flash_sparkle"
+    },
+    {
+      "id": 22,
+      "name": "FX_MODE_HYPER_SPARKLE",
+      "function": "mode_hyper_sparkle"
+    },
+    {
+      "id": 23,
+      "name": "FX_MODE_STROBE",
+      "function": "mode_strobe"
+    },
+    {
+      "id": 24,
+      "name": "FX_MODE_STROBE_RAINBOW",
+      "function": "mode_strobe_rainbow"
+    },
+    {
+      "id": 25,
+      "name": "FX_MODE_MULTI_STROBE",
+      "function": "mode_multi_strobe"
+    },
+    {
+      "id": 26,
+      "name": "FX_MODE_BLINK_RAINBOW",
+      "function": "mode_blink_rainbow"
+    },
+    {
+      "id": 27,
+      "name": "FX_MODE_ANDROID",
+      "function": "mode_android"
+    },
+    {
+      "id": 28,
+      "name": "FX_MODE_CHASE_COLOR",
+      "function": "mode_chase_color"
+    },
+    {
+      "id": 29,
+      "name": "FX_MODE_CHASE_RANDOM",
+      "function": "mode_chase_random"
+    },
+    {
+      "id": 30,
+      "name": "FX_MODE_CHASE_RAINBOW",
+      "function": "mode_chase_rainbow"
+    },
+    {
+      "id": 31,
+      "name": "FX_MODE_CHASE_FLASH",
+      "function": "mode_chase_flash"
+    },
+    {
+      "id": 32,
+      "name": "FX_MODE_CHASE_FLASH_RANDOM",
+      "function": "mode_chase_flash_random"
+    },
+    {
+      "id": 33,
+      "name": "FX_MODE_CHASE_RAINBOW_WHITE",
+      "function": "mode_chase_rainbow_white"
+    },
+    {
+      "id": 34,
+      "name": "FX_MODE_COLORFUL",
+      "function": "mode_colorful"
+    },
+    {
+      "id": 35,
+      "name": "FX_MODE_TRAFFIC_LIGHT",
+      "function": "mode_traffic_light"
+    },
+    {
+      "id": 36,
+      "name": "FX_MODE_COLOR_SWEEP_RANDOM",
+      "function": "mode_color_sweep_random"
+    },
+    {
+      "id": 37,
+      "name": "FX_MODE_RUNNING_COLOR",
+      "function": "mode_running_color"
+    },
+    {
+      "id": 38,
+      "name": "FX_MODE_AURORA",
+      "function": "mode_aurora"
+    },
+    {
+      "id": 39,
+      "name": "FX_MODE_RUNNING_RANDOM",
+      "function": "mode_running_random"
+    },
+    {
+      "id": 40,
+      "name": "FX_MODE_LARSON_SCANNER",
+      "function": "mode_larson_scanner"
+    },
+    {
+      "id": 41,
+      "name": "FX_MODE_COMET",
+      "function": "mode_comet"
+    },
+    {
+      "id": 42,
+      "name": "FX_MODE_FIREWORKS",
+      "function": "mode_fireworks"
+    },
+    {
+      "id": 43,
+      "name": "FX_MODE_RAIN",
+      "function": "mode_rain"
+    },
+    {
+      "id": 44,
+      "name": "FX_MODE_TETRIX",
+      "function": "mode_tetrix"
+    },
+    {
+      "id": 45,
+      "name": "FX_MODE_FIRE_FLICKER",
+      "function": "mode_fire_flicker"
+    },
+    {
+      "id": 46,
+      "name": "FX_MODE_GRADIENT",
+      "function": "mode_gradient"
+    },
+    {
+      "id": 47,
+      "name": "FX_MODE_LOADING",
+      "function": "mode_loading"
+    },
+    {
+      "id": 49,
+      "name": "FX_MODE_FAIRY",
+      "function": "mode_fairy"
+    },
+    {
+      "id": 50,
+      "name": "FX_MODE_TWO_DOTS",
+      "function": "mode_two_dots"
+    },
+    {
+      "id": 51,
+      "name": "FX_MODE_FAIRYTWINKLE",
+      "function": "mode_fairytwinkle"
+    },
+    {
+      "id": 52,
+      "name": "FX_MODE_RUNNING_DUAL",
+      "function": "mode_running_dual"
+    },
+    {
+      "id": 54,
+      "name": "FX_MODE_TRICOLOR_CHASE",
+      "function": "mode_tricolor_chase"
+    },
+    {
+      "id": 55,
+      "name": "FX_MODE_TRICOLOR_WIPE",
+      "function": "mode_tricolor_wipe"
+    },
+    {
+      "id": 56,
+      "name": "FX_MODE_TRICOLOR_FADE",
+      "function": "mode_tricolor_fade"
+    },
+    {
+      "id": 57,
+      "name": "FX_MODE_LIGHTNING",
+      "function": "mode_lightning"
+    },
+    {
+      "id": 58,
+      "name": "FX_MODE_ICU",
+      "function": "mode_icu"
+    },
+    {
+      "id": 59,
+      "name": "FX_MODE_MULTI_COMET",
+      "function": "mode_multi_comet"
+    },
+    {
+      "id": 60,
+      "name": "FX_MODE_DUAL_LARSON_SCANNER",
+      "function": "mode_dual_larson_scanner"
+    },
+    {
+      "id": 61,
+      "name": "FX_MODE_RANDOM_CHASE",
+      "function": "mode_random_chase"
+    },
+    {
+      "id": 62,
+      "name": "FX_MODE_OSCILLATE",
+      "function": "mode_oscillate"
+    },
+    {
+      "id": 63,
+      "name": "FX_MODE_PRIDE_2015",
+      "function": "mode_pride_2015"
+    },
+    {
+      "id": 64,
+      "name": "FX_MODE_JUGGLE",
+      "function": "mode_juggle"
+    },
+    {
+      "id": 65,
+      "name": "FX_MODE_PALETTE",
+      "function": "mode_palette"
+    },
+    {
+      "id": 66,
+      "name": "FX_MODE_FIRE_2012",
+      "function": "mode_fire_2012"
+    },
+    {
+      "id": 67,
+      "name": "FX_MODE_COLORWAVES",
+      "function": "mode_colorwaves"
+    },
+    {
+      "id": 68,
+      "name": "FX_MODE_BPM",
+      "function": "mode_bpm"
+    },
+    {
+      "id": 69,
+      "name": "FX_MODE_FILLNOISE8",
+      "function": "mode_fillnoise8"
+    },
+    {
+      "id": 70,
+      "name": "FX_MODE_NOISE16_1",
+      "function": "mode_noise16_1"
+    },
+    {
+      "id": 71,
+      "name": "FX_MODE_NOISE16_2",
+      "function": "mode_noise16_2"
+    },
+    {
+      "id": 72,
+      "name": "FX_MODE_NOISE16_3",
+      "function": "mode_noise16_3"
+    },
+    {
+      "id": 73,
+      "name": "FX_MODE_NOISE16_4",
+      "function": "mode_noise16_4"
+    },
+    {
+      "id": 74,
+      "name": "FX_MODE_COLORTWINKLE",
+      "function": "mode_colortwinkle"
+    },
+    {
+      "id": 75,
+      "name": "FX_MODE_LAKE",
+      "function": "mode_lake"
+    },
+    {
+      "id": 76,
+      "name": "FX_MODE_METEOR",
+      "function": "mode_meteor"
+    },
+    {
+      "id": 77,
+      "name": "FX_MODE_METEOR_SMOOTH",
+      "function": "mode_meteor_smooth"
+    },
+    {
+      "id": 78,
+      "name": "FX_MODE_RAILWAY",
+      "function": "mode_railway"
+    },
+    {
+      "id": 79,
+      "name": "FX_MODE_RIPPLE",
+      "function": "mode_ripple"
+    },
+    {
+      "id": 80,
+      "name": "FX_MODE_TWINKLEFOX",
+      "function": "mode_twinklefox"
+    },
+    {
+      "id": 81,
+      "name": "FX_MODE_TWINKLECAT",
+      "function": "mode_twinklecat"
+    },
+    {
+      "id": 82,
+      "name": "FX_MODE_HALLOWEEN_EYES",
+      "function": "mode_halloween_eyes"
+    },
+    {
+      "id": 83,
+      "name": "FX_MODE_STATIC_PATTERN",
+      "function": "mode_static_pattern"
+    },
+    {
+      "id": 84,
+      "name": "FX_MODE_TRI_STATIC_PATTERN",
+      "function": "mode_tri_static_pattern"
+    },
+    {
+      "id": 85,
+      "name": "FX_MODE_SPOTS",
+      "function": "mode_spots"
+    },
+    {
+      "id": 86,
+      "name": "FX_MODE_SPOTS_FADE",
+      "function": "mode_spots_fade"
+    },
+    {
+      "id": 87,
+      "name": "FX_MODE_GLITTER",
+      "function": "mode_glitter"
+    },
+    {
+      "id": 88,
+      "name": "FX_MODE_CANDLE",
+      "function": "mode_candle"
+    },
+    {
+      "id": 89,
+      "name": "FX_MODE_STARBURST",
+      "function": "mode_starburst"
+    },
+    {
+      "id": 90,
+      "name": "FX_MODE_EXPLODING_FIREWORKS",
+      "function": "mode_exploding_fireworks"
+    },
+    {
+      "id": 91,
+      "name": "FX_MODE_BOUNCINGBALLS",
+      "function": "mode_bouncing_balls"
+    },
+    {
+      "id": 92,
+      "name": "FX_MODE_SINELON",
+      "function": "mode_sinelon"
+    },
+    {
+      "id": 93,
+      "name": "FX_MODE_SINELON_DUAL",
+      "function": "mode_sinelon_dual"
+    },
+    {
+      "id": 94,
+      "name": "FX_MODE_SINELON_RAINBOW",
+      "function": "mode_sinelon_rainbow"
+    },
+    {
+      "id": 95,
+      "name": "FX_MODE_POPCORN",
+      "function": "mode_popcorn"
+    },
+    {
+      "id": 96,
+      "name": "FX_MODE_DRIP",
+      "function": "mode_drip"
+    },
+    {
+      "id": 97,
+      "name": "FX_MODE_PLASMA",
+      "function": "mode_plasma"
+    },
+    {
+      "id": 98,
+      "name": "FX_MODE_PERCENT",
+      "function": "mode_percent"
+    },
+    {
+      "id": 99,
+      "name": "FX_MODE_RIPPLE_RAINBOW",
+      "function": "mode_ripple_rainbow"
+    },
+    {
+      "id": 100,
+      "name": "FX_MODE_HEARTBEAT",
+      "function": "mode_heartbeat"
+    },
+    {
+      "id": 101,
+      "name": "FX_MODE_PACIFICA",
+      "function": "mode_pacifica"
+    },
+    {
+      "id": 102,
+      "name": "FX_MODE_CANDLE_MULTI",
+      "function": "mode_candle_multi"
+    },
+    {
+      "id": 103,
+      "name": "FX_MODE_SOLID_GLITTER",
+      "function": "mode_solid_glitter"
+    },
+    {
+      "id": 104,
+      "name": "FX_MODE_SUNRISE",
+      "function": "mode_sunrise"
+    },
+    {
+      "id": 105,
+      "name": "FX_MODE_PHASED",
+      "function": "mode_phased"
+    },
+    {
+      "id": 106,
+      "name": "FX_MODE_TWINKLEUP",
+      "function": "mode_twinkleup"
+    },
+    {
+      "id": 107,
+      "name": "FX_MODE_NOISEPAL",
+      "function": "mode_noisepal"
+    },
+    {
+      "id": 108,
+      "name": "FX_MODE_SINEWAVE",
+      "function": "mode_sinewave"
+    },
+    {
+      "id": 109,
+      "name": "FX_MODE_PHASEDNOISE",
+      "function": "mode_phased_noise"
+    },
+    {
+      "id": 110,
+      "name": "FX_MODE_FLOW",
+      "function": "mode_flow"
+    },
+    {
+      "id": 111,
+      "name": "FX_MODE_CHUNCHUN",
+      "function": "mode_chunchun"
+    },
+    {
+      "id": 112,
+      "name": "FX_MODE_DANCING_SHADOWS",
+      "function": "mode_dancing_shadows"
+    },
+    {
+      "id": 113,
+      "name": "FX_MODE_WASHING_MACHINE",
+      "function": "mode_washing_machine"
+    },
+    {
+      "id": 115,
+      "name": "FX_MODE_BLENDS",
+      "function": "mode_blends"
+    },
+    {
+      "id": 116,
+      "name": "FX_MODE_TV_SIMULATOR",
+      "function": "mode_tv_simulator"
+    },
+    {
+      "id": 117,
+      "name": "FX_MODE_DYNAMIC_SMOOTH",
+      "function": "mode_dynamic_smooth"
+    },
+    {
+      "id": 128,
+      "name": "FX_MODE_PIXELS",
+      "function": "mode_pixels"
+    },
+    {
+      "id": 129,
+      "name": "FX_MODE_PIXELWAVE",
+      "function": "mode_pixelwave"
+    },
+    {
+      "id": 130,
+      "name": "FX_MODE_JUGGLES",
+      "function": "mode_juggles"
+    },
+    {
+      "id": 131,
+      "name": "FX_MODE_MATRIPIX",
+      "function": "mode_matripix"
+    },
+    {
+      "id": 132,
+      "name": "FX_MODE_GRAVIMETER",
+      "function": "mode_gravimeter"
+    },
+    {
+      "id": 133,
+      "name": "FX_MODE_PLASMOID",
+      "function": "mode_plasmoid"
+    },
+    {
+      "id": 134,
+      "name": "FX_MODE_PUDDLES",
+      "function": "mode_puddles"
+    },
+    {
+      "id": 135,
+      "name": "FX_MODE_MIDNOISE",
+      "function": "mode_midnoise"
+    },
+    {
+      "id": 136,
+      "name": "FX_MODE_NOISEMETER",
+      "function": "mode_noisemeter"
+    },
+    {
+      "id": 137,
+      "name": "FX_MODE_FREQWAVE",
+      "function": "mode_freqwave"
+    },
+    {
+      "id": 138,
+      "name": "FX_MODE_FREQMATRIX",
+      "function": "mode_freqmatrix"
+    },
+    {
+      "id": 140,
+      "name": "FX_MODE_WATERFALL",
+      "function": "mode_waterfall"
+    },
+    {
+      "id": 141,
+      "name": "FX_MODE_FREQPIXELS",
+      "function": "mode_freqpixels"
+    },
+    {
+      "id": 143,
+      "name": "FX_MODE_NOISEFIRE",
+      "function": "mode_noisefire"
+    },
+    {
+      "id": 144,
+      "name": "FX_MODE_PUDDLEPEAK",
+      "function": "mode_puddlepeak"
+    },
+    {
+      "id": 145,
+      "name": "FX_MODE_NOISEMOVE",
+      "function": "mode_noisemove"
+    },
+    {
+      "id": 147,
+      "name": "FX_MODE_PERLINMOVE",
+      "function": "mode_perlinmove"
+    },
+    {
+      "id": 148,
+      "name": "FX_MODE_RIPPLEPEAK",
+      "function": "mode_ripplepeak"
+    },
+    {
+      "id": 155,
+      "name": "FX_MODE_FREQMAP",
+      "function": "mode_freqmap"
+    },
+    {
+      "id": 156,
+      "name": "FX_MODE_GRAVCENTER",
+      "function": "mode_gravcenter"
+    },
+    {
+      "id": 157,
+      "name": "FX_MODE_GRAVCENTRIC",
+      "function": "mode_gravcentric"
+    },
+    {
+      "id": 158,
+      "name": "FX_MODE_GRAVFREQ",
+      "function": "mode_gravfreq"
+    },
+    {
+      "id": 159,
+      "name": "FX_MODE_DJLIGHT",
+      "function": "mode_DJLight"
+    },
+    {
+      "id": 163,
+      "name": "FX_MODE_BLURZ",
+      "function": "mode_blurz"
+    },
+    {
+      "id": 179,
+      "name": "FX_MODE_FLOWSTRIPE",
+      "function": "mode_FlowStripe"
+    },
+    {
+      "id": 184,
+      "name": "FX_MODE_WAVESINS",
+      "function": "mode_wavesins"
+    },
+    {
+      "id": 185,
+      "name": "FX_MODE_ROCKTAVES",
+      "function": "mode_rocktaves"
+    }
+  ]
+}

@@ -50,6 +50,7 @@ using fract8 = uint8_t;
 #define NOBLEND 0
 #define LINEARBLEND 1
 #define FAIR_DATA_PER_SEG 2048
+#define USERMOD_ID_AUDIOREACTIVE 42
 
 using std::max;
 using std::min;
@@ -85,6 +86,7 @@ struct CRGB {
   bool operator!=(const CRGB& other) const { return !(*this == other); }
   uint8_t& operator[](size_t index) { return index == 0 ? r : (index == 1 ? g : b); }
   const uint8_t& operator[](size_t index) const { return index == 0 ? r : (index == 1 ? g : b); }
+  explicit operator uint32_t() const { return (uint32_t(r) << 16) | (uint32_t(g) << 8) | uint32_t(b); }
 
   static const CRGB Black;
   static const CRGB White;
@@ -92,6 +94,9 @@ struct CRGB {
   static const CRGB Green;
   static const CRGB Blue;
   static const CRGB Gray;
+  static const CRGB Orange;
+  static const CRGB DarkOrange;
+  static const CRGB Yellow;
 
   CRGB& operator|=(const CRGB& other) {
     r = std::max(r, other.r);
@@ -181,6 +186,9 @@ inline const CRGB CRGB::Red = CRGB(255, 0, 0);
 inline const CRGB CRGB::Green = CRGB(0, 255, 0);
 inline const CRGB CRGB::Blue = CRGB(0, 0, 255);
 inline const CRGB CRGB::Gray = CRGB(128, 128, 128);
+inline const CRGB CRGB::Orange = CRGB(255, 165, 0);
+inline const CRGB CRGB::DarkOrange = CRGB(255, 80, 0);
+inline const CRGB CRGB::Yellow = CRGB(255, 255, 0);
 
 inline uint32_t color_blend(uint32_t color1, uint32_t color2, uint16_t blend, bool b16 = false) {
   const uint32_t scale = b16 ? 65535U : 255U;
@@ -363,6 +371,29 @@ struct AudioData {
   float bpm = 0.0f;
 };
 
+enum um_types_t {
+  UMT_BYTE = 0,
+  UMT_UINT16,
+  UMT_INT16,
+  UMT_UINT32,
+  UMT_INT32,
+  UMT_FLOAT,
+  UMT_DOUBLE,
+  UMT_BYTE_ARR,
+  UMT_UINT16_ARR,
+  UMT_INT16_ARR,
+  UMT_UINT32_ARR,
+  UMT_INT32_ARR,
+  UMT_FLOAT_ARR,
+  UMT_DOUBLE_ARR
+};
+
+struct um_data_t {
+  size_t u_size = 0;
+  um_types_t* u_type = nullptr;
+  void** u_data = nullptr;
+};
+
 struct SegmentData {
   uint16_t start = 0;
   uint16_t stop = 133;
@@ -400,6 +431,7 @@ class HostSegment {
   bool check2 = false;
   bool check3 = false;
   bool reverse = false;
+  uint8_t soundSim = 0;
   uint16_t step = 0;
   uint16_t call = 0;
   uint16_t aux0 = 0;
@@ -487,9 +519,22 @@ class HostStrip {
 extern HostStrip strip;
 extern AudioData audioData;
 extern float volumeSmth;
+extern uint16_t volumeRaw;
 extern float FFT_MajorPeak;
+extern float my_magnitude;
 extern bool samplePeak;
+extern uint8_t samplePeakByte;
 extern uint8_t fftResult[16];
+extern float fftBin[16];
+extern uint8_t maxVol;
+extern uint8_t binNum;
+
+class UsermodManager {
+ public:
+  static bool getUMData(um_data_t** umData, uint8_t modId = USERMOD_ID_AUDIOREACTIVE);
+};
+
+um_data_t* simulateSound(uint8_t simulationId);
 
 #define SEGMENT strip._segments[strip.getCurrSegmentId()]
 #define SEGENV SEGMENT

@@ -664,6 +664,33 @@ uint16_t mode_washing_machine(void);
 uint16_t mode_blends(void);
 uint16_t mode_tv_simulator(void);
 uint16_t mode_dynamic_smooth(void);
+uint16_t mode_pixels(void);
+uint16_t mode_pixelwave(void);
+uint16_t mode_juggles(void);
+uint16_t mode_matripix(void);
+uint16_t mode_gravimeter(void);
+uint16_t mode_plasmoid(void);
+uint16_t mode_puddles(void);
+uint16_t mode_midnoise(void);
+uint16_t mode_noisemeter(void);
+uint16_t mode_freqwave(void);
+uint16_t mode_freqmatrix(void);
+uint16_t mode_waterfall(void);
+uint16_t mode_freqpixels(void);
+uint16_t mode_noisefire(void);
+uint16_t mode_puddlepeak(void);
+uint16_t mode_noisemove(void);
+uint16_t mode_perlinmove(void);
+uint16_t mode_ripplepeak(void);
+uint16_t mode_freqmap(void);
+uint16_t mode_gravcenter(void);
+uint16_t mode_gravcentric(void);
+uint16_t mode_gravfreq(void);
+uint16_t mode_DJLight(void);
+uint16_t mode_blurz(void);
+uint16_t mode_FlowStripe(void);
+uint16_t mode_wavesins(void);
+uint16_t mode_rocktaves(void);
 
 inline UpstreamModePtr upstreamModeFor(uint8_t mode) {
   switch (mode) {
@@ -782,6 +809,33 @@ inline UpstreamModePtr upstreamModeFor(uint8_t mode) {
     case FX_MODE_BLENDS: return &mode_blends;
     case FX_MODE_TV_SIMULATOR: return &mode_tv_simulator;
     case FX_MODE_DYNAMIC_SMOOTH: return &mode_dynamic_smooth;
+    case FX_MODE_PIXELS: return &mode_pixels;
+    case FX_MODE_PIXELWAVE: return &mode_pixelwave;
+    case FX_MODE_JUGGLES: return &mode_juggles;
+    case FX_MODE_MATRIPIX: return &mode_matripix;
+    case FX_MODE_GRAVIMETER: return &mode_gravimeter;
+    case FX_MODE_PLASMOID: return &mode_plasmoid;
+    case FX_MODE_PUDDLES: return &mode_puddles;
+    case FX_MODE_MIDNOISE: return &mode_midnoise;
+    case FX_MODE_NOISEMETER: return &mode_noisemeter;
+    case FX_MODE_FREQWAVE: return &mode_freqwave;
+    case FX_MODE_FREQMATRIX: return &mode_freqmatrix;
+    case FX_MODE_WATERFALL: return &mode_waterfall;
+    case FX_MODE_FREQPIXELS: return &mode_freqpixels;
+    case FX_MODE_NOISEFIRE: return &mode_noisefire;
+    case FX_MODE_PUDDLEPEAK: return &mode_puddlepeak;
+    case FX_MODE_NOISEMOVE: return &mode_noisemove;
+    case FX_MODE_PERLINMOVE: return &mode_perlinmove;
+    case FX_MODE_RIPPLEPEAK: return &mode_ripplepeak;
+    case FX_MODE_FREQMAP: return &mode_freqmap;
+    case FX_MODE_GRAVCENTER: return &mode_gravcenter;
+    case FX_MODE_GRAVCENTRIC: return &mode_gravcentric;
+    case FX_MODE_GRAVFREQ: return &mode_gravfreq;
+    case FX_MODE_DJLIGHT: return &mode_DJLight;
+    case FX_MODE_BLURZ: return &mode_blurz;
+    case FX_MODE_FLOWSTRIPE: return &mode_FlowStripe;
+    case FX_MODE_WAVESINS: return &mode_wavesins;
+    case FX_MODE_ROCKTAVES: return &mode_rocktaves;
     default: return nullptr;
   }
 }
