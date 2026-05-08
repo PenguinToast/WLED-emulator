@@ -35,7 +35,7 @@ export function applyStateUpdate(state, patch, catalog) {
       ? [segmentIndexById(next, patch.seg.id)]
       : selectedSegmentIndexes(next);
     for (const index of indexes) {
-      next[index] = deepMerge(next[index] || { id: index }, patch.seg);
+      mergeSegmentPatchAt(next, index, patch.seg);
     }
     normalizedPatch = { ...patch, seg: next };
   }
@@ -57,7 +57,25 @@ function selectedSegmentIndexes(segments) {
 
 function mergeSegmentPatch(segments, segPatch) {
   const targetIndex = Number.isInteger(segPatch.id) ? segmentIndexById(segments, segPatch.id) : 0;
-  segments[targetIndex] = deepMerge(segments[targetIndex] || { id: targetIndex }, segPatch);
+  mergeSegmentPatchAt(segments, targetIndex, segPatch);
+}
+
+function mergeSegmentPatchAt(segments, targetIndex, segPatch) {
+  const { col, ...rest } = segPatch;
+  const base = segments[targetIndex] || { id: targetIndex };
+  const merged = deepMerge(base, rest);
+  if (Array.isArray(col)) merged.col = mergeColorSlots(base.col, col);
+  segments[targetIndex] = merged;
+}
+
+function mergeColorSlots(current, patch) {
+  const next = normalizeColors(current);
+  for (let index = 0; index < Math.min(3, patch.length); index += 1) {
+    const color = patch[index];
+    if (!Array.isArray(color) || color.length === 0) continue;
+    next[index] = normalizeColors([color])[0];
+  }
+  return next;
 }
 
 export function normalizeState(state, catalog) {

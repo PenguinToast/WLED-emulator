@@ -16,6 +16,8 @@ The active server exposes enough of the WLED HTTP JSON and WebSocket API for the
 - `GET /json/palx`: emulator palette RGB data.
 - `GET /json/live`: small WLED-style live preview payload.
 - `GET /presets.json`: minimal preset list.
+- `GET /edit?edit=/version-info.json`: minimal version-info file used by the WLED UI install/upgrade prompt.
+- `POST /upload`: accepts WLED UI multipart uploads for `version-info.json`.
 - `GET /ws`: raw WebSocket endpoint for WLED UI state updates.
 
 ## Emulator Endpoints
@@ -30,3 +32,10 @@ The active server exposes enough of the WLED HTTP JSON and WebSocket API for the
 
 The server accepts WLED-style state patches. When `seg` is an array, patches are merged into matching segment IDs. When `seg` is an object, the patch is applied to every selected segment, matching how the WLED UI commonly edits multiple segments.
 
+Segment color updates are slot-aware. The WLED UI sends partial color arrays such as `col:[[],[r,g,b,w],[]]` when only one slot changes; empty slot arrays preserve the existing color instead of replacing it with black.
+
+`info.leds.seglc` is exposed as WLED's per-segment light-capability bitfield, not segment length. The ring fixture reports RGB capability (`0x01`) for each segment; ring lengths live in `info.fixture` and `/api/emulator/state.fixture`.
+
+## Version Info
+
+The WLED UI probes `/edit?edit=/version-info.json` on load. The emulator serves a current version-info document by default so the first-install reporting modal does not appear every time the UI opens. If the UI uploads a new `version-info.json` through `/upload`, the emulator stores that choice in memory for the running process.

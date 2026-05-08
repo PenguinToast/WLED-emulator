@@ -27,6 +27,7 @@ This project runs the real WLED browser UI and mobile-app protocol against a loc
 - `src/server/palettes.mjs`: emulator palette names and RGB lookup data.
 - `src/server/responses.mjs`: JSON/text/static file response helpers.
 - `src/server/presets.mjs`: small preset payload served at `/presets.json`.
+- `src/server/version-info.mjs`: minimal WLED UI version-info file emulation for the install/upgrade prompt.
 
 ## Browser Modules
 

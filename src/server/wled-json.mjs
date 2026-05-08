@@ -1,13 +1,14 @@
 import { fixtureMetadata } from "./fixture.mjs";
 import { paletteData, palettes } from "./palettes.mjs";
 import { clone } from "./util.mjs";
+import { emulatorVersion } from "./config.mjs";
 
 export function infoObject(ctx) {
   const uptime = Math.floor((Date.now() - ctx.startedAt) / 1000);
   const ledCount = ctx.state.seg.reduce((max, seg) => Math.max(max, seg.stop || 0), 0) || 150;
-  const seglc = ctx.state.seg.map((seg) => Math.max(0, (seg.stop || 0) - (seg.start || 0)));
+  const seglc = ctx.state.seg.map(() => 0x01);
   return {
-    ver: "0.15.4-emulator",
+    ver: emulatorVersion,
     vid: 2505080,
     cn: "EDC",
     release: "WLED protocol emulator",
@@ -90,4 +91,3 @@ export function emulatorStateJson(ctx) {
     fixture: fixtureMetadata(),
   };
 }
-

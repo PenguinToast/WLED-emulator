@@ -7,4 +7,4 @@ export const wledDir = join(publicDir, "wled");
 export const emulatorDir = join(publicDir, "emulator");
 export const vendorWledDir = join(rootDir, "vendor/wled-0.15.4");
 export const port = Number(process.env.PORT || 5173);
-
+export const emulatorVersion = "0.15.4-emulator";

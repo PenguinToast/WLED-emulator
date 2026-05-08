@@ -6,6 +6,7 @@ import { paletteData, palettes } from "./palettes.mjs";
 import { presetsJson } from "./presets.mjs";
 import { json, readJsonBody, serveFile, serveStatic, text } from "./responses.mjs";
 import { clamp, clone } from "./util.mjs";
+import { applyUpload, isVersionInfoRequest } from "./version-info.mjs";
 import { broadcast } from "./websocket.mjs";
 import { emulatorStateJson, fullJson, infoObject, siJson } from "./wled-json.mjs";
 
@@ -36,6 +37,7 @@ export async function handleHttp(req, res, ctx) {
       return;
     }
     if (url.pathname === "/json/info") return json(res, infoObject(ctx));
+    if (isVersionInfoRequest(url)) return json(res, ctx.versionInfo);
     if (url.pathname === "/json/eff" || url.pathname === "/json/effects") return json(res, ctx.catalog.effects);
     if (url.pathname === "/json/pal" || url.pathname === "/json/palettes") return json(res, palettes);
     if (url.pathname === "/json/fxdata") return json(res, ctx.catalog.fxdata);
@@ -43,6 +45,10 @@ export async function handleHttp(req, res, ctx) {
     if (url.pathname === "/json/nodes") return json(res, { nodes: [] });
     if (url.pathname === "/json/live") return json(res, { leds: renderPreviewLeds(ctx.state) });
     if (url.pathname === "/presets.json") return json(res, presetsJson());
+    if (url.pathname === "/upload" && req.method === "POST") {
+      const ok = await applyUpload(req, ctx);
+      return text(res, ok ? "OK" : "Unsupported upload", ok ? 200 : 400);
+    }
     if (url.pathname === "/api/emulator/audio" && req.method === "POST") {
       const body = await readJsonBody(req);
       Object.assign(ctx.audio, {
@@ -84,4 +90,3 @@ function applyPatch(ctx, patch) {
   applyStateUpdate(ctx.state, patch, ctx.catalog);
   broadcast(ctx, siJson(ctx));
 }
-

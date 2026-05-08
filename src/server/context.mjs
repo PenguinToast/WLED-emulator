@@ -1,4 +1,5 @@
 import { createInitialState, normalizeState } from "./device-state.mjs";
+import { createInitialVersionInfo } from "./version-info.mjs";
 import { loadOfficialWledEffects } from "./wled-catalog.mjs";
 
 export function createAppContext() {
@@ -24,6 +25,6 @@ export function createAppContext() {
       updatedAt: 0,
       source: "",
     },
+    versionInfo: createInitialVersionInfo(),
   };
 }
-
