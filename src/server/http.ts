@@ -79,7 +79,8 @@ export async function handleHttp(req, res, ctx, options: HttpOptions = {}) {
       return json(res, { ok: true, count: ctx.externalFrame.leds.length });
     }
     if (url.pathname === "/api/emulator/state") return json(res, emulatorStateJson(ctx));
-    if (url.pathname === "/emulator" || url.pathname === "/emulator/") {
+    if (url.pathname === "/emulator") return redirect(res, "/emulator/");
+    if (url.pathname === "/emulator/") {
       const filePath = options.devServer ? join(emulatorDir, "index.html") : builtOrSourceEmulatorFile("index.html");
       return htmlFile(res, filePath, (html) => transformHtml(options.devServer, url.pathname, html));
     }
@@ -104,6 +105,11 @@ export async function handleHttp(req, res, ctx, options: HttpOptions = {}) {
 function applyPatch(ctx, patch) {
   applyStateUpdate(ctx.state, patch, ctx.catalog);
   broadcast(ctx, siJson(ctx));
+}
+
+function redirect(res, location: string) {
+  res.writeHead(308, { location });
+  res.end();
 }
 
 function builtOrSourceEmulatorFile(relativePath: string) {
