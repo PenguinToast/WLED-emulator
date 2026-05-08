@@ -5,7 +5,7 @@ This project runs the real WLED browser UI and mobile-app protocol against a loc
 ## Runtime Flow
 
 1. `server.ts` creates one app context and starts the HTTP server.
-2. In development, `src/server/dev.ts` attaches Vite middleware and injects the Vite client into served HTML.
+2. In development, `src/server/dev.ts` attaches Vite middleware and injects the Vite client into emulator HTML only.
 3. `src/server/http.ts` serves WLED-compatible JSON endpoints, vendored WLED UI assets, emulator pages, and frame/audio bridge endpoints.
 4. `src/server/websocket.ts` handles the raw WLED WebSocket connection used by the WLED UI.
 5. `src/emulator/main.ts` starts the browser-side emulator application through Vite.
@@ -43,7 +43,7 @@ This project runs the real WLED browser UI and mobile-app protocol against a loc
 - `src/emulator/color.ts`: color math, palette interpolation, and effect helper API.
 - `src/emulator/readouts.ts`: side-panel state readouts.
 
-Vite owns browser TypeScript in development and production builds. Development serves `/src/emulator/*.ts` directly through Vite middleware; `npm run build` writes bundled browser assets under `dist/emulator/`, and the server prefers those built files for normal `npm start`.
+Vite owns browser TypeScript in development and production builds. Development serves `/src/emulator/*.ts` directly through Vite middleware and leaves the vendored WLED UI untransformed; `npm run build` writes bundled browser assets under `dist/emulator/`, and the server prefers those built files for normal `npm start`.
 
 ## Native Boundary
 

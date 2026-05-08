@@ -89,7 +89,7 @@ export async function handleHttp(req, res, ctx, options: HttpOptions = {}) {
       return htmlFile(res, filePath, (html) => transformHtml(options.devServer, url.pathname, html));
     }
     if (url.pathname === "/" || url.pathname === "/index.htm") {
-      return htmlFile(res, join(wledDir, "index.htm"), (html) => transformHtml(options.devServer, url.pathname, html));
+      return htmlFile(res, join(wledDir, "index.htm"));
     }
     if (["/index.css", "/index.js", "/iro.js", "/rangetouch.js"].includes(url.pathname)) {
       return serveFile(res, join(wledDir, url.pathname.slice(1)));
