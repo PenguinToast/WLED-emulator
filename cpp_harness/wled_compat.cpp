@@ -83,11 +83,13 @@ void HostStrip::fill(uint32_t color) {
 }
 
 void HostSegment::setPixelColor(int n, uint32_t color) {
+  if (n >= 0) n &= 0xffff;
   if (n < 0 || n >= int(length())) return;
   strip.setPixelColor(start + uint16_t(n), color_fade(color, opacity));
 }
 
 uint32_t HostSegment::getPixelColor(int n) const {
+  if (n >= 0) n &= 0xffff;
   if (n < 0 || n >= int(length())) return BLACK;
   return strip.getPixelColor(start + uint16_t(n));
 }
@@ -151,9 +153,17 @@ uint32_t HostSegment::color_from_palette(uint16_t index, bool mapping, bool wrap
 
 void prepareWledFrame(EffectContext& ctx) {
   strip.bind(&ctx.leds);
-  if (strip._segments.empty()) strip._segments.resize(1);
-  strip.selectSegment(0);
+  strip.selectSegment(ctx.segment.id);
   HostSegment& segment = SEGMENT;
+  const bool modeChanged = segment.mode != ctx.segment.mode;
+  const bool boundsChanged = segment.start != ctx.segment.start || segment.stop != ctx.segment.stop;
+  if (modeChanged || boundsChanged) {
+    segment.step = 0;
+    segment.call = 0;
+    segment.aux0 = 0;
+    segment.aux1 = 0;
+    segment.deallocateData();
+  }
   segment.start = ctx.segment.start;
   segment.stop = std::min<uint16_t>(ctx.segment.stop, ctx.leds.size());
   segment.opacity = ctx.segment.brightness;

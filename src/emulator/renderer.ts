@@ -62,7 +62,7 @@ export function drawSpectrum() {
   }
 }
 
-function resizeCanvas(target) {
+function resizeCanvas(target: HTMLCanvasElement) {
   const ratio = window.devicePixelRatio || 1;
   const rect = target.getBoundingClientRect();
   target.width = Math.max(1, Math.floor(rect.width * ratio));
@@ -70,6 +70,7 @@ function resizeCanvas(target) {
 }
 
 function paintLed(x, y, radius, brightness, color) {
+  color ||= [0, 0, 0];
   const r = clamp(color[0] * brightness);
   const g = clamp(color[1] * brightness);
   const b = clamp(color[2] * brightness);
@@ -86,4 +87,3 @@ function paintLed(x, y, radius, brightness, color) {
   ctx.arc(x, y, radius, 0, Math.PI * 2);
   ctx.fill();
 }
-

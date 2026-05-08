@@ -9,7 +9,7 @@ The C++ harness is the current path for iterating on native custom effects witho
 - `cpp_harness/generated/upstream_fx_1d.cpp`: generated host-adapted source extracted from vendored WLED `FX.cpp`.
 - `cpp_harness/generated/upstream_fx_1d.hpp`: generated dispatch table mapping official WLED mode IDs to compiled upstream functions.
 - `cpp_harness/generated/upstream_fx_1d_modes.json`: generated support manifest consumed by the server effect catalog.
-- `cpp_harness/custom_effect.cpp`: `mode_edc_custom()` plus fallback only for modes not yet covered by the upstream host build.
+- `cpp_harness/custom_effect.cpp`: `mode_edc_custom()` and native dispatch into generated upstream effects.
 - `cpp_harness/main.cpp`: stdin/stdout process wrapper that renders every active WLED segment once per frame.
 - `tools/run-cpp-effect.mjs`: compiles the harness, polls emulator state/audio, and posts RGB frames back to `/api/emulator/frame`.
 - `tools/generate-upstream-fx.mjs`: regenerates the host-adapted upstream source and dispatch header from `vendor/wled-0.15.4/wled00/FX.cpp`.
@@ -28,7 +28,7 @@ In another terminal, start the C++ streamer:
 npm run cpp:run
 ```
 
-The browser emulator will display C++ frames while they are fresh. If the C++ streamer stops, the browser falls back to its JavaScript renderer.
+The browser emulator will display C++ frames while they are fresh. If the C++ streamer stops, the browser clears the virtual LEDs rather than rendering a JavaScript approximation.
 
 `npm run cpp:run` regenerates the upstream host source before compiling. To regenerate without running the streamer:
 
@@ -36,7 +36,15 @@ The browser emulator will display C++ frames while they are fresh. If the C++ st
 npm run cpp:generate
 ```
 
-The runner now sends the full WLED segment list to the native process each frame. Each segment is rendered with its own `start`, `stop`, brightness, mode, speed, intensity, palette, and color slots, matching the daisy-chained ring fixture more closely than the earlier single-segment path.
+The runner now sends the full WLED segment list to the native process each frame. Each segment is rendered with its own `id`, `start`, `stop`, brightness, mode, speed, intensity, palette, and color slots, matching the daisy-chained ring fixture more closely than the earlier single-segment path.
+
+Native segment state is persistent per segment ID. `SEGENV.data`, `SEGENV.call`, and related fields are preserved across frames unless an effect requests a different allocation size, which is required for upstream modes such as Bouncing Balls and Aurora.
+
+The 1D shim also decodes WLED's virtual-strip pixel indexes back to local segment coordinates. Several upstream 1D effects use that encoding even when there is only one virtual strip.
+
+When a segment changes mode or bounds, the shim resets that segment's runtime fields and allocated data, matching WLED's expectation that a new effect starts with a clean segment environment.
+
+The runner sends process-relative uptime seconds to the native process so `millis()`/`strip.now` retain frame-level precision for physics-style effects.
 
 ## Upstream Effect Coverage
 

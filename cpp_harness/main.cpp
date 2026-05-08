@@ -34,6 +34,7 @@ int main() {
 
     for (int index = 0; index < segmentCount; index += 1) {
       int start = 0;
+      int id = index;
       int stop = 0;
       int brightness = 255;
       int mode = 9;
@@ -41,8 +42,9 @@ int main() {
       int intensity = 128;
       int palette = 0;
       int on = 1;
-      std::cin >> start >> stop >> brightness >> mode >> speed >> intensity >> palette >> on;
+      std::cin >> id >> start >> stop >> brightness >> mode >> speed >> intensity >> palette >> on;
 
+      ctx.segment.id = clamp8(id);
       ctx.segment.start = std::max(0, std::min<int>(start, leds.size()));
       ctx.segment.stop = std::max<int>(ctx.segment.start, std::min<int>(stop, leds.size()));
       ctx.segment.brightness = on ? clamp8((brightness * stateBrightness) / 255.0f) : 0;
@@ -68,4 +70,3 @@ int main() {
     std::cout << "]}" << std::endl;
   }
 }
-

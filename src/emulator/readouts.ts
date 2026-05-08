@@ -12,6 +12,5 @@ export function updateReadouts() {
   ui.bass.textContent = audio.bass.toFixed(2);
   ui.mid.textContent = audio.mid.toFixed(2);
   ui.treble.textContent = audio.treble.toFixed(2);
-  ui.bpm.textContent = audio.bpm ? Math.round(audio.bpm) : "-";
+  ui.bpm.textContent = audio.bpm ? String(Math.round(audio.bpm)) : "-";
 }
-

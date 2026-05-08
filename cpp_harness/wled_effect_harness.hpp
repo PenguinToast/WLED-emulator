@@ -395,6 +395,7 @@ struct um_data_t {
 };
 
 struct SegmentData {
+  uint8_t id = 0;
   uint16_t start = 0;
   uint16_t stop = 133;
   uint8_t brightness = 255;
@@ -448,7 +449,7 @@ class HostSegment {
   bool is2D() const { return false; }
   uint32_t currentColor(uint8_t slot) const { return colors[slot % NUM_COLORS]; }
   bool allocateData(size_t len) {
-    storage.assign(len, 0);
+    if (storage.size() != len) storage.assign(len, 0);
     data = storage.empty() ? nullptr : storage.data();
     return len == 0 || data != nullptr;
   }

@@ -8,10 +8,10 @@ This project runs the real WLED browser UI and mobile-app protocol against a loc
 2. In development, `src/server/dev.ts` attaches Vite middleware and injects the Vite client into served HTML.
 3. `src/server/http.ts` serves WLED-compatible JSON endpoints, vendored WLED UI assets, emulator pages, and frame/audio bridge endpoints.
 4. `src/server/websocket.ts` handles the raw WLED WebSocket connection used by the WLED UI.
-5. `public/emulator/main.js` starts the browser-side emulator application.
-6. `public/emulator/js/transport.js` watches server state over HTTP polling and WebSocket updates.
-7. `public/emulator/js/audio.js` analyzes mic or audio-file input and posts normalized audio bands to the server.
-8. `public/emulator/js/effects.js` renders browser fallback frames unless an external C++ frame stream is active.
+5. `src/emulator/main.ts` starts the browser-side emulator application through Vite.
+6. `src/emulator/transport.ts` watches server state over HTTP polling and WebSocket updates.
+7. `src/emulator/audio.ts` analyzes mic or audio-file input and posts normalized audio bands to the server.
+8. `src/emulator/native-frame.ts` copies fresh native C++ RGB frames into the browser model and clears the LEDs when no fresh native frame exists.
 9. `tools/generate-upstream-fx.mjs` extracts the supported upstream native effects and writes C++ sources plus a JSON support manifest.
 10. `tools/run-cpp-effect.mjs` can compile and run the C++ harness, then stream RGB frames back into `/api/emulator/frame`.
 
@@ -33,15 +33,17 @@ This project runs the real WLED browser UI and mobile-app protocol against a loc
 
 ## Browser Modules
 
-- `public/emulator/js/app.js`: app startup and animation loop.
-- `public/emulator/js/model.js`: shared mutable browser model.
-- `public/emulator/js/dom.js`: DOM element lookup.
-- `public/emulator/js/transport.js`: server fetch/poll/WebSocket integration.
-- `public/emulator/js/audio.js`: Web Audio input, band analysis, beat detection, and audio posting.
-- `public/emulator/js/effects.js`: browser fallback renderer and custom-effect editor glue.
-- `public/emulator/js/renderer.js`: ring canvas and spectrum canvas painting.
-- `public/emulator/js/color.js`: color math, palette interpolation, and effect helper API.
-- `public/emulator/js/readouts.js`: side-panel state readouts.
+- `src/emulator/app.ts`: app startup and animation loop.
+- `src/emulator/model.ts`: shared mutable browser model.
+- `src/emulator/dom.ts`: typed DOM element lookup.
+- `src/emulator/transport.ts`: server fetch/poll/WebSocket integration.
+- `src/emulator/audio.ts`: Web Audio input, band analysis, beat detection, and audio posting.
+- `src/emulator/native-frame.ts`: native-frame consumer for the virtual output; it does not approximate WLED effects in JavaScript.
+- `src/emulator/renderer.ts`: ring canvas and spectrum canvas painting.
+- `src/emulator/color.ts`: color math, palette interpolation, and effect helper API.
+- `src/emulator/readouts.ts`: side-panel state readouts.
+
+Vite owns browser TypeScript in development and production builds. Development serves `/src/emulator/*.ts` directly through Vite middleware; `npm run build` writes bundled browser assets under `dist/emulator/`, and the server prefers those built files for normal `npm start`.
 
 ## Native Boundary
 
@@ -52,6 +54,10 @@ The native renderer owns effect execution. `tools/generate-upstream-fx.mjs` read
 - `upstream_fx_1d_modes.json`: server-readable support manifest.
 
 Server code must not parse generated C++ to infer support. `src/server/wled-catalog.ts` uses the JSON manifest to expose supported effect slots and marks unsupported official slots as `RSVD`, preserving WLED mode IDs while keeping the UI away from native-unimplemented modes.
+
+The browser renderer is intentionally not an effect engine. It displays frames posted to `/api/emulator/frame`; stale or missing native frames produce a dark fixture rather than a JavaScript approximation.
+
+The native harness keeps WLED segment environment state inside `HostStrip` segments keyed by the WLED segment ID passed from `tools/run-cpp-effect.mjs`, so upstream effects that allocate `SEGENV.data` or depend on `SEGENV.call` can evolve across frames independently on each ring.
 
 ## Documentation Rule
 

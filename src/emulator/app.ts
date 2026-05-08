@@ -1,15 +1,13 @@
 import { loadFile, postAudio, startMic, stopAudio, updateAudio } from "./audio.js";
 import { ui } from "./dom.js";
-import { bindCustomEditor, compileCustom, renderEffect } from "./effects.js";
 import { model } from "./model.js";
+import { applyNativeFrame } from "./native-frame.js";
 import { draw, drawSpectrum } from "./renderer.js";
 import { updateReadouts } from "./readouts.js";
 import { connect, loadInitialState, pollEmulatorState } from "./transport.js";
 
 export async function startApp() {
   bindControls();
-  bindCustomEditor();
-  compileCustom();
   await loadInitialState();
   connect();
   requestAnimationFrame(frame);
@@ -24,7 +22,7 @@ function bindControls() {
 function frame(now) {
   updateAudio();
   pollEmulatorState(now);
-  renderEffect(now / 1000);
+  applyNativeFrame();
   draw();
   drawSpectrum();
   updateReadouts();
@@ -32,4 +30,3 @@ function frame(now) {
   model.frame += 1;
   requestAnimationFrame(frame);
 }
-

@@ -83,8 +83,7 @@ h2 {
   margin-top: 7px;
 }
 
-nav,
-.buttonRow {
+nav {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
@@ -140,32 +139,6 @@ dd { margin: 0; text-align: right; }
 audio {
   width: 100%;
   margin-top: 14px;
-}
-
-.hint {
-  margin: 10px 0;
-  color: var(--muted);
-}
-
-textarea {
-  width: 100%;
-  min-height: 310px;
-  resize: vertical;
-  margin-top: 10px;
-  border: 1px solid #465044;
-  border-radius: 6px;
-  background: #101310;
-  color: var(--text);
-  padding: 10px;
-  tab-size: 2;
-  font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-}
-
-#error {
-  min-height: 28px;
-  color: var(--warn);
-  white-space: pre-wrap;
-  font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 }
 
 @media (max-width: 940px) {

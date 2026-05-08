@@ -14,6 +14,6 @@
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["server.ts", "src/**/*.ts"],
+  "include": ["server.ts", "vite.config.ts", "src/**/*.ts"],
   "exclude": ["dist", "node_modules", "vendor", "cpp_harness/generated"]
 }

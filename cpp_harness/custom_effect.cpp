@@ -45,57 +45,6 @@ uint16_t mode_edc_custom(void) {
   return FRAMETIME;
 }
 
-static void modeSolidFallback() {
-  SEGMENT.fill(SEGCOLOR(0));
-}
-
-static void modeRainbowFallback() {
-  const uint16_t len = std::max<uint16_t>(1, SEGLEN);
-  const uint16_t counter = strip.now * ((SEGMENT.speed >> 2) + 2);
-  for (uint16_t i = 0; i < len; i += 1) {
-    SEGMENT.setPixelColor(i, SEGMENT.color_wheel(uint8_t((i * 255U) / len + (counter >> 8))));
-  }
-}
-
-static void modeSparkleFallback() {
-  SEGMENT.fadeToBlackBy(48);
-  const uint8_t count = 1 + SEGMENT.intensity / 48;
-  for (uint8_t i = 0; i < count; i += 1) {
-    const uint16_t pos = random16(std::max<uint16_t>(1, SEGLEN));
-    SEGMENT.addPixelColor(pos, SEGMENT.color_from_palette(random8(), false, true, 0));
-  }
-}
-
-static void modeChaseFallback() {
-  SEGMENT.fadeToBlackBy(78);
-  const uint16_t len = std::max<uint16_t>(1, SEGLEN);
-  const uint16_t head = ((strip.now * (2 + SEGMENT.speed / 16)) / 64) % len;
-  const uint8_t tail = 2 + SEGMENT.intensity / 40;
-  for (uint8_t i = 0; i < tail; i += 1) {
-    const uint16_t pos = (head + len - i) % len;
-    const uint8_t bri = 255 - (i * 200 / tail);
-    SEGMENT.setPixelColor(pos, SEGMENT.color_from_palette(pos * 255U / len, false, true, 0, bri));
-  }
-}
-
-static void modeAudioFallback() {
-  SEGMENT.fadeToBlackBy(54);
-  const uint16_t len = std::max<uint16_t>(1, SEGLEN);
-  for (uint16_t i = 0; i < len; i += 1) {
-    const uint8_t band = fftResult[(i * 16U) / len];
-    const uint8_t level = std::max<uint8_t>(36, band);
-    SEGMENT.setPixelColor(i, SEGMENT.color_from_palette(i * 255U / len + strip.now / 32, false, true, 0, level));
-  }
-}
-
-static void modePaletteFallback() {
-  const uint16_t len = std::max<uint16_t>(1, SEGLEN);
-  for (uint16_t i = 0; i < len; i += 1) {
-    const uint8_t wave = sin8_t(i * 255U / len + strip.now / (3 + SEGMENT.speed / 32));
-    SEGMENT.setPixelColor(i, SEGMENT.color_from_palette(i * 255U / len + strip.now / 48, false, true, 0, 72 + wave * 183 / 255));
-  }
-}
-
 void render(EffectContext& ctx) {
   prepareWledFrame(ctx);
   const uint8_t mode = SEGMENT.mode;
@@ -105,7 +54,7 @@ void render(EffectContext& ctx) {
   } else if (UpstreamModePtr upstream = upstreamModeFor(mode)) {
     upstream();
   } else {
-    modePaletteFallback();
+    SEGMENT.fill(BLACK);
   }
 
   finishWledFrame(ctx);

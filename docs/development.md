@@ -15,7 +15,7 @@ Useful checks after refactors:
 ```sh
 npm run typecheck
 npm run build
-node --check public/emulator/main.js
+node --check tools/run-cpp-effect.mjs
 node tools/generate-upstream-fx.mjs
 c++ -std=c++17 -O2 -Icpp_harness cpp_harness/main.cpp cpp_harness/custom_effect.cpp cpp_harness/wled_compat.cpp cpp_harness/generated/upstream_fx_1d.cpp -o /tmp/edc-wled-cpp-effect
 ```
@@ -49,4 +49,4 @@ The old standalone custom-effect prototype is intentionally kept in `legacy/stan
 
 ## Refactor Boundaries
 
-Prefer keeping WLED protocol behavior in `src/server/`, development server wiring in `src/server/dev.ts`, virtual-output UI behavior in `public/emulator/js/`, native effect work in `cpp_harness/`, generated native artifacts in `cpp_harness/generated/`, automation/bridge scripts in `tools/`, and architectural explanations in `docs/`.
+Prefer keeping WLED protocol behavior in `src/server/`, development server wiring in `src/server/dev.ts`, virtual-output UI behavior in `src/emulator/`, static emulator shell/CSS in `public/emulator/`, native effect work in `cpp_harness/`, generated native artifacts in `cpp_harness/generated/`, automation/bridge scripts in `tools/`, and architectural explanations in `docs/`.

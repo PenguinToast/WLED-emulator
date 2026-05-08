@@ -1,6 +1,7 @@
 import { join } from "node:path";
+import { existsSync } from "node:fs";
 
-import { emulatorDir, wledDir } from "./config.js";
+import { builtEmulatorDir, builtEmulatorHtmlDir, emulatorDir, wledDir } from "./config.js";
 import { applyStateUpdate, renderPreviewLeds } from "./device-state.js";
 import { serveViteAsset, transformHtml } from "./dev.js";
 import { paletteData, palettes } from "./palettes.js";
@@ -79,11 +80,13 @@ export async function handleHttp(req, res, ctx, options: HttpOptions = {}) {
     }
     if (url.pathname === "/api/emulator/state") return json(res, emulatorStateJson(ctx));
     if (url.pathname === "/emulator" || url.pathname === "/emulator/") {
-      return htmlFile(res, join(emulatorDir, "index.html"), (html) => transformHtml(options.devServer, url.pathname, html));
+      const filePath = options.devServer ? join(emulatorDir, "index.html") : builtOrSourceEmulatorFile("index.html");
+      return htmlFile(res, filePath, (html) => transformHtml(options.devServer, url.pathname, html));
     }
-    if (url.pathname.startsWith("/emulator/")) return serveStatic(res, emulatorDir, url.pathname.replace(/^\/emulator\//, ""));
+    if (url.pathname.startsWith("/emulator/")) return serveEmulatorStatic(res, url.pathname.replace(/^\/emulator\//, ""), Boolean(options.devServer));
     if (url.pathname === "/liveview" || url.pathname === "/liveview2D") {
-      return htmlFile(res, join(emulatorDir, "liveview.html"), (html) => transformHtml(options.devServer, url.pathname, html));
+      const filePath = options.devServer ? join(emulatorDir, "liveview.html") : builtOrSourceEmulatorFile("liveview.html");
+      return htmlFile(res, filePath, (html) => transformHtml(options.devServer, url.pathname, html));
     }
     if (url.pathname === "/" || url.pathname === "/index.htm") {
       return htmlFile(res, join(wledDir, "index.htm"), (html) => transformHtml(options.devServer, url.pathname, html));
@@ -101,4 +104,19 @@ export async function handleHttp(req, res, ctx, options: HttpOptions = {}) {
 function applyPatch(ctx, patch) {
   applyStateUpdate(ctx.state, patch, ctx.catalog);
   broadcast(ctx, siJson(ctx));
+}
+
+function builtOrSourceEmulatorFile(relativePath: string) {
+  const builtPath = join(builtEmulatorHtmlDir, relativePath);
+  return existsSync(builtPath) ? builtPath : join(emulatorDir, relativePath);
+}
+
+function serveEmulatorStatic(res, relativePath: string, devMode: boolean) {
+  if (!devMode) {
+    for (const base of [builtEmulatorHtmlDir, builtEmulatorDir]) {
+      const builtPath = join(base, relativePath);
+      if (existsSync(builtPath)) return serveFile(res, builtPath);
+    }
+  }
+  return serveStatic(res, emulatorDir, relativePath);
 }

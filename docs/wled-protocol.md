@@ -22,7 +22,7 @@ The active server exposes enough of the WLED HTTP JSON and WebSocket API for the
 
 ## Emulator Endpoints
 
-- `GET /emulator`: virtual LED output with audio input and custom-effect editor.
+- `GET /emulator`: virtual LED output with audio input and native-frame display.
 - `GET /liveview` and `/liveview2D`: lightweight WLED liveview-compatible ring preview.
 - `GET /api/emulator/state`: combined state, info, effect catalog, palette data, audio state, fixture metadata, and latest external frame.
 - `POST /api/emulator/audio`: normalized audio state from the browser.

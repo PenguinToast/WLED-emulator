@@ -1,7 +1,8 @@
-import { clamp } from "./js/color.js";
+import { clamp } from "./color.js";
 
-const canvas = document.getElementById("ledCanvas");
+const canvas = document.getElementById("ledCanvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d");
+if (!ctx) throw new Error("Canvas 2D context is not available");
 let state = null;
 
 function connect() {
@@ -68,4 +69,3 @@ function draw(now) {
 connect();
 fetch("/json/si").then((res) => res.json()).then((json) => { state = json.state; });
 requestAnimationFrame(draw);
-

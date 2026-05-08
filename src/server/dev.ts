@@ -37,7 +37,16 @@ export async function transformHtml(devServer: DevServer | null, url: string, ht
 export async function serveViteAsset(devServer: DevServer | null, req, res): Promise<boolean> {
   if (!devServer || !req.url) return false;
   const pathname = new URL(req.url, "http://localhost").pathname;
-  if (!pathname.startsWith("/@vite/") && !pathname.startsWith("/@id/") && !pathname.startsWith("/node_modules/")) {
+  if (
+    !pathname.startsWith("/@vite/") &&
+    !pathname.startsWith("/emulator/@vite/") &&
+    !pathname.startsWith("/@id/") &&
+    !pathname.startsWith("/emulator/@id/") &&
+    !pathname.startsWith("/node_modules/") &&
+    !pathname.startsWith("/emulator/node_modules/") &&
+    !pathname.startsWith("/src/") &&
+    !pathname.startsWith("/emulator/src/")
+  ) {
     return false;
   }
   await new Promise<void>((resolve) => devServer.middlewares(req, res, () => resolve()));

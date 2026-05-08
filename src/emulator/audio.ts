@@ -12,7 +12,7 @@ export async function startMic() {
     audio.source.connect(audio.analyser);
     ui.status.textContent = "Microphone active. WLED UI changes will drive this output.";
   } catch (error) {
-    ui.error.textContent = error.message;
+    ui.status.textContent = error.message;
   }
 }
 
@@ -30,7 +30,7 @@ export async function loadFile(file) {
     await ui.player.play();
     ui.status.textContent = `Playing ${file.name}`;
   } catch (error) {
-    ui.error.textContent = error.message;
+    ui.status.textContent = error.message;
   }
 }
 
@@ -126,4 +126,3 @@ function disconnectAudio() {
     audio.stream = null;
   }
 }
-

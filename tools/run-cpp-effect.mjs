@@ -22,6 +22,9 @@ effect.on("error", (error) => {
   console.error(error.message);
   process.exitCode = 1;
 });
+effect.stdin.on("error", (error) => {
+  if (error.code !== "EPIPE") console.error(error.message);
+});
 effect.on("exit", (code) => {
   if (code !== null && code !== 0) {
     console.error(`C++ effect exited with ${code}`);
@@ -34,6 +37,7 @@ lines.on("line", (line) => pending.push(line));
 
 let frame = 0;
 let lastPost = 0;
+const startedAt = Date.now();
 
 async function tick() {
   const now = Date.now();
@@ -42,7 +46,7 @@ async function tick() {
   const audio = state.audio || {};
   if (!effect.stdin.writable) return;
   const fields = [
-    (now / 1000).toFixed(3),
+    ((now - startedAt) / 1000).toFixed(3),
     frame,
     state.state.bri ?? 180,
     segments.length,
@@ -55,6 +59,7 @@ async function tick() {
   ];
   for (const segment of segments) {
     fields.push(
+      segment.id ?? index,
       segment.start ?? 0,
       segment.stop ?? ((segment.start ?? 0) + (segment.len ?? 1)),
       segment.bri ?? 255,
@@ -72,16 +77,17 @@ async function tick() {
   }
   effect.stdin.write(`${fields.join(" ")}\n`);
 
+  let latestPayload = null;
   while (pending.length) {
-    const payload = JSON.parse(pending.shift());
-    if (now - lastPost > 16) {
-      lastPost = now;
-      await fetch(`${server}/api/emulator/frame`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ source: "cpp_harness", leds: payload.leds }),
-      });
-    }
+    latestPayload = JSON.parse(pending.shift());
+  }
+  if (latestPayload && now - lastPost > 16) {
+    lastPost = now;
+    await fetch(`${server}/api/emulator/frame`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ source: "cpp_harness", leds: latestPayload.leds }),
+    });
   }
   frame += 1;
 }

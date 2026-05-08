@@ -9,7 +9,6 @@ export const model = {
   externalFrame: null,
   leds: [],
   ws: null,
-  custom: null,
   frame: 0,
 };
 
@@ -73,4 +72,3 @@ export function updateFromWsMessage(json) {
     model.fixture = json.info.fixture || model.fixture;
   }
 }
-
