@@ -1,0 +1,12 @@
+.DS_Store
+node_modules/
+npm-debug.log*
+
+# Native harness outputs
+/edc-wled-cpp-effect
+*.o
+*.dSYM/
+
+# Local environment files
+.env
+.env.*

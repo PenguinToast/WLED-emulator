@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EDC WLED Emulator</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="stage-panel" aria-label="LED preview">
+        <header class="topbar">
+          <div>
+            <h1>EDC WLED Emulator</h1>
+            <p id="runtimeStatus">Idle</p>
+          </div>
+          <div class="status-grid" aria-label="audio meter">
+            <span>Bass <strong id="bassReadout">0.00</strong></span>
+            <span>Mid <strong id="midReadout">0.00</strong></span>
+            <span>Treble <strong id="trebleReadout">0.00</strong></span>
+            <span>Volume <strong id="volumeReadout">0.00</strong></span>
+          </div>
+        </header>
+
+        <div class="canvas-wrap">
+          <canvas id="ledCanvas" width="1200" height="540" aria-label="virtual LED output"></canvas>
+          <canvas id="spectrumCanvas" width="1200" height="120" aria-label="audio spectrum"></canvas>
+        </div>
+      </section>
+
+      <aside class="control-panel" aria-label="emulator controls">
+        <section class="control-section">
+          <h2>Playback</h2>
+          <div class="button-row">
+            <button id="startMicButton" type="button">Mic</button>
+            <label class="file-button">
+              File
+              <input id="audioFileInput" type="file" accept="audio/*">
+            </label>
+            <button id="stopAudioButton" type="button">Stop</button>
+          </div>
+          <audio id="audioPlayer" controls></audio>
+        </section>
+
+        <section class="control-section">
+          <h2>Fixture</h2>
+          <label>
+            LEDs
+            <input id="ledCountInput" type="number" min="1" max="2048" value="150">
+          </label>
+          <label>
+            Layout
+            <select id="layoutSelect">
+              <option value="strip">Strip</option>
+              <option value="matrix">Matrix</option>
+            </select>
+          </label>
+          <label>
+            Matrix width
+            <input id="matrixWidthInput" type="number" min="1" max="128" value="30">
+          </label>
+          <label>
+            Brightness
+            <input id="brightnessInput" type="range" min="1" max="255" value="180">
+          </label>
+        </section>
+
+        <section class="control-section">
+          <h2>Effect</h2>
+          <label>
+            Mode
+            <select id="effectSelect"></select>
+          </label>
+          <label>
+            Palette
+            <select id="paletteSelect"></select>
+          </label>
+          <label>
+            Speed
+            <input id="speedInput" type="range" min="0" max="255" value="128">
+          </label>
+          <label>
+            Intensity
+            <input id="intensityInput" type="range" min="0" max="255" value="160">
+          </label>
+        </section>
+
+        <section class="control-section editor-section">
+          <div class="section-header">
+            <h2>Custom Effect</h2>
+            <div class="button-row compact">
+              <button id="runCustomButton" type="button">Run</button>
+              <button id="resetCustomButton" type="button">Reset</button>
+            </div>
+          </div>
+          <textarea id="customEditor" spellcheck="false"></textarea>
+          <pre id="effectError" aria-live="polite"></pre>
+        </section>
+      </aside>
+    </main>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

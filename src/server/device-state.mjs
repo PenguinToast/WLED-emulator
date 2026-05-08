@@ -1,0 +1,106 @@
+import { createRingSegments, ringNames } from "./fixture.mjs";
+import { palettes } from "./palettes.mjs";
+import { clampInt, clone, deepMerge } from "./util.mjs";
+
+export function createInitialState() {
+  return {
+    on: true,
+    bri: 180,
+    transition: 7,
+    ps: -1,
+    pl: -1,
+    nl: { on: false, dur: 60, fade: true, mode: 1, tbri: 0, rem: 0 },
+    udpn: { send: false, recv: false },
+    lor: 0,
+    mainseg: 0,
+    ledmap: 0,
+    AudioReactive: { on: true },
+    seg: createRingSegments(),
+  };
+}
+
+export function applyStateUpdate(state, patch, catalog) {
+  if (!patch || typeof patch !== "object") return;
+  let normalizedPatch = patch;
+  if (Array.isArray(patch.seg)) {
+    const next = clone(state.seg);
+    for (const segPatch of patch.seg) {
+      if (!segPatch || typeof segPatch !== "object") continue;
+      const index = Number.isInteger(segPatch.id) ? next.findIndex((seg) => seg.id === segPatch.id) : 0;
+      const targetIndex = index >= 0 ? index : next.length;
+      next[targetIndex] = deepMerge(next[targetIndex] || { id: targetIndex }, segPatch);
+    }
+    normalizedPatch = { ...patch, seg: next };
+  } else if (patch.seg && typeof patch.seg === "object") {
+    const next = clone(state.seg);
+    const targetIndexes = next
+      .map((seg, index) => (seg.sel ? index : -1))
+      .filter((index) => index >= 0);
+    const indexes = targetIndexes.length ? targetIndexes : [0];
+    for (const index of indexes) {
+      next[index] = deepMerge(next[index] || { id: index }, patch.seg);
+    }
+    normalizedPatch = { ...patch, seg: next };
+  }
+  deepMerge(state, normalizedPatch);
+  normalizeState(state, catalog);
+}
+
+export function normalizeState(state, catalog) {
+  state.bri = clampInt(state.bri, 1, 255);
+  state.seg = Array.isArray(state.seg) ? state.seg : [];
+  if (!state.seg.length) {
+    state.seg.push({ id: 0, start: 0, stop: 150, len: 150, sel: true });
+  }
+  state.seg = state.seg.map((seg, index) => {
+    const start = clampInt(seg.start ?? 0, 0, 2047);
+    const stop = clampInt(seg.stop ?? seg.len ?? 150, start + 1, 2048);
+    return {
+      id: seg.id ?? index,
+      n: seg.n ?? ringNames[index] ?? `Segment ${index}`,
+      start,
+      stop,
+      len: stop - start,
+      grp: seg.grp ?? 1,
+      spc: seg.spc ?? 0,
+      of: seg.of ?? 0,
+      set: clampInt(seg.set ?? 0, 0, 3),
+      on: seg.on ?? true,
+      frz: seg.frz ?? false,
+      bri: clampInt(seg.bri ?? 255, 0, 255),
+      col: normalizeColors(seg.col),
+      fx: clampInt(seg.fx ?? 0, 0, catalog.effects.length - 1),
+      sx: clampInt(seg.sx ?? 128, 0, 255),
+      ix: clampInt(seg.ix ?? 128, 0, 255),
+      pal: clampInt(seg.pal ?? 0, 0, palettes.length - 1),
+      sel: seg.sel ?? index === 0,
+      rev: seg.rev ?? false,
+      mi: seg.mi ?? false,
+    };
+  });
+}
+
+export function renderPreviewLeds(state) {
+  const seg = state.seg[0];
+  const count = seg?.len || 150;
+  const base = seg?.col?.[0] || [255, 160, 80];
+  return Array.from({ length: count }, (_, index) => {
+    const scale = state.on && seg.on ? (0.35 + 0.65 * Math.sin(Date.now() / 350 + index * 0.18) ** 2) : 0;
+    return base.slice(0, 3).map((channel) => Math.round(channel * scale));
+  });
+}
+
+function normalizeColors(colors) {
+  const fallback = [[255, 160, 80], [0, 0, 0], [0, 0, 0]];
+  const source = Array.isArray(colors) ? colors : fallback;
+  return [0, 1, 2].map((index) => {
+    const color = Array.isArray(source[index]) ? source[index] : fallback[index];
+    return [
+      clampInt(color[0] ?? 0, 0, 255),
+      clampInt(color[1] ?? 0, 0, 255),
+      clampInt(color[2] ?? 0, 0, 255),
+      ...(color.length > 3 ? [clampInt(color[3] ?? 0, 0, 255)] : []),
+    ];
+  });
+}
+

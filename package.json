@@ -1,0 +1,11 @@
+{
+  "name": "edc-wled-emulator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "cpp:generate": "node tools/generate-upstream-fx.mjs",
+    "cpp:run": "node tools/run-cpp-effect.mjs"
+  }
+}

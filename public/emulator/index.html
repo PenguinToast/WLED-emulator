@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EDC WLED Output Emulator</title>
+    <link rel="stylesheet" href="/emulator/style.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="preview">
+        <header class="topbar">
+          <div>
+            <h1>Virtual WLED Output</h1>
+            <p id="status">Connecting to WLED protocol emulator...</p>
+          </div>
+          <nav>
+            <a href="/" target="_blank">WLED UI</a>
+            <button id="micButton" type="button">Mic</button>
+            <label class="fileButton">
+              File
+              <input id="fileInput" type="file" accept="audio/*">
+            </label>
+            <button id="stopButton" type="button">Stop</button>
+          </nav>
+        </header>
+
+        <canvas id="ledCanvas" width="1280" height="580"></canvas>
+        <canvas id="spectrumCanvas" width="1280" height="120"></canvas>
+      </section>
+
+      <aside>
+        <section>
+          <h2>WLED State</h2>
+          <dl>
+            <div><dt>Power</dt><dd id="powerReadout">-</dd></div>
+            <div><dt>Brightness</dt><dd id="brightnessReadout">-</dd></div>
+            <div><dt>Effect</dt><dd id="effectReadout">-</dd></div>
+            <div><dt>Palette</dt><dd id="paletteReadout">-</dd></div>
+            <div><dt>LEDs</dt><dd id="ledCountReadout">-</dd></div>
+          </dl>
+        </section>
+
+        <section>
+          <h2>Audio</h2>
+          <dl>
+            <div><dt>Volume</dt><dd id="volumeReadout">0.00</dd></div>
+            <div><dt>Bass</dt><dd id="bassReadout">0.00</dd></div>
+            <div><dt>Mid</dt><dd id="midReadout">0.00</dd></div>
+            <div><dt>Treble</dt><dd id="trebleReadout">0.00</dd></div>
+            <div><dt>BPM</dt><dd id="bpmReadout">-</dd></div>
+          </dl>
+          <audio id="audioPlayer" controls></audio>
+        </section>
+
+        <section>
+          <h2>Custom Effect</h2>
+          <p class="hint">Select “Custom Effect” in the real WLED UI, edit here, then run.</p>
+          <div class="buttonRow">
+            <button id="runButton" type="button">Run</button>
+            <button id="resetButton" type="button">Reset</button>
+          </div>
+          <textarea id="editor" spellcheck="false"></textarea>
+          <pre id="error"></pre>
+        </section>
+      </aside>
+    </main>
+    <script type="module" src="/emulator/main.js"></script>
+  </body>
+</html>
