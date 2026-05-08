@@ -11,7 +11,8 @@ The C++ harness is the current path for iterating on native custom effects witho
 - `cpp_harness/generated/upstream_fx_1d_modes.json`: generated support manifest consumed by the server effect catalog.
 - `cpp_harness/custom_effect.cpp`: `mode_edc_custom()` and native dispatch into generated upstream effects.
 - `cpp_harness/main.cpp`: stdin/stdout process wrapper that renders every active WLED segment once per frame.
-- `tools/run-cpp-effect.mjs`: compiles the harness, polls emulator state/audio, and posts RGB frames back to `/api/emulator/frame`.
+- `tools/run-cpp-effect.mjs`: compiles the harness, polls emulator state/audio, and streams RGB frames back to `/api/emulator/frames`.
+- `tools/benchmark-frame-pipeline.mjs`: measures raw C++ frame throughput and end-to-end WebSocket frame-stream throughput.
 - `tools/generate-upstream-fx.mjs`: regenerates the host-adapted upstream source and dispatch header from `vendor/wled-0.15.4/wled00/FX.cpp`.
 
 ## Run Loop
@@ -45,6 +46,22 @@ The 1D shim also decodes WLED's virtual-strip pixel indexes back to local segmen
 When a segment changes mode or bounds, the shim resets that segment's runtime fields and allocated data, matching WLED's expectation that a new effect starts with a clean segment environment.
 
 The runner sends process-relative uptime seconds to the native process so `millis()`/`strip.now` retain frame-level precision for physics-style effects.
+
+The runner renders frames at a fast cadence from cached emulator state, refreshing WLED state/audio controls separately. This keeps the native frame stream smooth without fetching the full catalog-sized state payload every frame.
+
+Frames include a runner stream ID and a monotonically increasing frame number. The runner streams them over `/api/emulator/frames` when possible and falls back to HTTP POSTs; the server ignores stale frames within the same stream so delayed older data cannot overwrite newer LED data, while still accepting fresh frames after runner restarts.
+
+The native process emits compact flat RGB hex lines to stdout. The runner preserves that compact RGB representation over the browser WebSocket instead of expanding every frame into nested arrays; the emulator UI decodes the flat RGB frame immediately before painting.
+
+## Benchmarking
+
+With the protocol server and C++ runner active, measure the frame pipeline with:
+
+```sh
+node tools/benchmark-frame-pipeline.mjs
+```
+
+The benchmark reports raw native-process throughput and WebSocket receive throughput separately. In the 7-ring, 133-LED fixture, raw native effect rendering should be thousands of frames per second, while the streamed emulator path should land near display cadence at roughly 60 FPS.
 
 ## Upstream Effect Coverage
 

@@ -2,11 +2,12 @@ import { clamp, paletteFor } from "./color.js";
 import { canvas, ctx, spectrumCanvas, spectrumCtx } from "./dom.js";
 import { activeSegment, audio, model } from "./model.js";
 
+const DISPLAY_GAIN = 2.4;
+
 export function draw() {
   resizeCanvas(canvas);
   const width = canvas.width;
   const height = canvas.height;
-  const stateBrightness = (model.state?.bri ?? 180) / 255;
   ctx.clearRect(0, 0, width, height);
   ctx.fillStyle = "#050605";
   ctx.fillRect(0, 0, width, height);
@@ -33,14 +34,12 @@ export function draw() {
     const stop = Math.min(model.leds.length, segment.stop || start + segment.len || start + 1);
     const count = Math.max(1, stop - start);
     const radius = ring === 0 ? 0 : ringGap * (ring + 0.54);
-    const segmentBrightness = (segment.bri ?? 255) / 255;
-    const brightness = stateBrightness * segmentBrightness;
     for (let offset = 0; offset < count; offset += 1) {
       const absoluteIndex = start + offset;
       const angle = -Math.PI / 2 + (offset / count) * Math.PI * 2;
       const x = cx + Math.cos(angle) * radius;
       const y = cy + Math.sin(angle) * radius;
-      paintLed(x, y, ledRadius, brightness, model.leds[absoluteIndex]);
+      paintLed(x, y, ledRadius, model.leds[absoluteIndex]);
     }
   }
 }
@@ -65,22 +64,24 @@ export function drawSpectrum() {
 function resizeCanvas(target: HTMLCanvasElement) {
   const ratio = window.devicePixelRatio || 1;
   const rect = target.getBoundingClientRect();
-  target.width = Math.max(1, Math.floor(rect.width * ratio));
-  target.height = Math.max(1, Math.floor(rect.height * ratio));
+  const nextWidth = Math.max(1, Math.floor(rect.width * ratio));
+  const nextHeight = Math.max(1, Math.floor(rect.height * ratio));
+  if (target.width !== nextWidth) target.width = nextWidth;
+  if (target.height !== nextHeight) target.height = nextHeight;
 }
 
-function paintLed(x, y, radius, brightness, color) {
+function paintLed(x, y, radius, color) {
   color ||= [0, 0, 0];
-  const r = clamp(color[0] * brightness);
-  const g = clamp(color[1] * brightness);
-  const b = clamp(color[2] * brightness);
-  const glow = ctx.createRadialGradient(x, y, 0, x, y, radius * 2.6);
-  glow.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.94)`);
-  glow.addColorStop(0.48, `rgba(${r}, ${g}, ${b}, 0.34)`);
+  const r = clamp(color[0] * DISPLAY_GAIN);
+  const g = clamp(color[1] * DISPLAY_GAIN);
+  const b = clamp(color[2] * DISPLAY_GAIN);
+  const glow = ctx.createRadialGradient(x, y, 0, x, y, radius * 3.1);
+  glow.addColorStop(0, `rgba(${r}, ${g}, ${b}, 1)`);
+  glow.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, 0.46)`);
   glow.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(x, y, radius * 2.6, 0, Math.PI * 2);
+  ctx.arc(x, y, radius * 3.1, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
   ctx.beginPath();

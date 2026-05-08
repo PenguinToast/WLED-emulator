@@ -11,6 +11,7 @@ export function createAppContext() {
     catalog,
     state,
     sockets: new Set(),
+    frameSockets: new Set(),
     audio: {
       volume: 0,
       bass: 0,
@@ -22,8 +23,11 @@ export function createAppContext() {
     },
     externalFrame: {
       leds: [],
+      rgb: "",
       updatedAt: 0,
       source: "",
+      frame: 0,
+      streamId: "",
     },
     versionInfo: createInitialVersionInfo(),
   };

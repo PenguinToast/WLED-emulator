@@ -4,7 +4,7 @@ import { port } from "./src/server/config.js";
 import { createAppContext } from "./src/server/context.js";
 import { createDevServer } from "./src/server/dev.js";
 import { handleHttp } from "./src/server/http.js";
-import { handleUpgrade } from "./src/server/websocket.js";
+import { handleFrameUpgrade, handleUpgrade } from "./src/server/websocket.js";
 
 const ctx = createAppContext();
 let devServer = null;
@@ -14,6 +14,7 @@ devServer = await createDevServer(server);
 server.on("upgrade", (req, socket) => {
   const pathname = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`).pathname;
   if (pathname === "/ws") handleUpgrade(req, socket, ctx);
+  else if (pathname === "/api/emulator/frames") handleFrameUpgrade(req, socket, ctx);
 });
 server.listen(port, () => {
   console.log(`EDC WLED emulator listening on http://localhost:${port}`);

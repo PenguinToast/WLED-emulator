@@ -33,15 +33,60 @@ effect.on("exit", (code) => {
 });
 const lines = createInterface({ input: effect.stdout });
 const pending = [];
-lines.on("line", (line) => pending.push(line));
+lines.on("line", (line) => pending.push(parseFrameLine(line)));
+
+function parseFrameLine(line) {
+  if (!line.startsWith("F ")) return JSON.parse(line);
+  return { rgb: line.slice(2).trim() };
+}
 
 let frame = 0;
-let lastPost = 0;
 const startedAt = Date.now();
+const streamId = `cpp_harness:${startedAt}`;
+let cachedState = await fetch(`${server}/api/emulator/state`).then((res) => res.json());
+let lastStateFetch = 0;
+let stateFetchPending = false;
+let frameSocket = null;
+let lastFrameSocketAttempt = 0;
 
-async function tick() {
+function frameWebSocketUrl() {
+  return `${server.replace(/^http/, "ws")}/api/emulator/frames`;
+}
+
+function ensureFrameSocket(now) {
+  if (typeof WebSocket === "undefined") return;
+  if (frameSocket?.readyState === WebSocket.OPEN || frameSocket?.readyState === WebSocket.CONNECTING) return;
+  if (now - lastFrameSocketAttempt < 1000) return;
+  lastFrameSocketAttempt = now;
+  frameSocket = new WebSocket(frameWebSocketUrl());
+  frameSocket.addEventListener("close", () => {
+    frameSocket = null;
+  });
+  frameSocket.addEventListener("error", () => {
+    frameSocket = null;
+  });
+}
+
+function refreshState(now) {
+  if (stateFetchPending || now - lastStateFetch < 100) return;
+  lastStateFetch = now;
+  stateFetchPending = true;
+  fetch(`${server}/api/emulator/state`)
+    .then((res) => res.json())
+    .then((state) => {
+      cachedState = state;
+    })
+    .catch((error) => console.error(error.message))
+    .finally(() => {
+      stateFetchPending = false;
+    });
+}
+
+function tick() {
   const now = Date.now();
-  const state = await fetch(`${server}/api/emulator/state`).then((res) => res.json());
+  refreshState(now);
+  ensureFrameSocket(now);
+  const state = cachedState;
   const segments = state.state.seg?.length ? state.state.seg : [];
   const audio = state.audio || {};
   if (!effect.stdin.writable) return;
@@ -57,7 +102,7 @@ async function tick() {
     audio.beat ? 1 : 0,
     audio.bpm ?? 0,
   ];
-  for (const segment of segments) {
+  for (const [index, segment] of segments.entries()) {
     fields.push(
       segment.id ?? index,
       segment.start ?? 0,
@@ -79,24 +124,29 @@ async function tick() {
 
   let latestPayload = null;
   while (pending.length) {
-    latestPayload = JSON.parse(pending.shift());
+    latestPayload = pending.shift();
   }
-  if (latestPayload && now - lastPost > 16) {
-    lastPost = now;
-    await fetch(`${server}/api/emulator/frame`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ source: "cpp_harness", leds: latestPayload.leds }),
-    });
+  if (latestPayload) {
+    const payload = JSON.stringify({ source: "cpp_harness", streamId, frame, rgb: latestPayload.rgb, leds: latestPayload.leds });
+    if (frameSocket?.readyState === WebSocket.OPEN) {
+      frameSocket.send(payload);
+    } else {
+      fetch(`${server}/api/emulator/frame`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: payload,
+      }).catch((error) => console.error(error.message));
+    }
   }
   frame += 1;
 }
 
 console.log(`Streaming C++ effect frames to ${server}/emulator`);
-const interval = setInterval(() => tick().catch((error) => console.error(error.message)), 16);
+const interval = setInterval(tick, 16);
 
 process.on("SIGINT", () => {
   clearInterval(interval);
+  frameSocket?.close();
   effect.kill("SIGINT");
   process.exit(0);
 });

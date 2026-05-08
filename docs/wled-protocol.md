@@ -26,7 +26,8 @@ The active server exposes enough of the WLED HTTP JSON and WebSocket API for the
 - `GET /liveview` and `/liveview2D`: lightweight WLED liveview-compatible ring preview.
 - `GET /api/emulator/state`: combined state, info, effect catalog, palette data, audio state, fixture metadata, and latest external frame.
 - `POST /api/emulator/audio`: normalized audio state from the browser.
-- `POST /api/emulator/frame`: RGB frame stream from native or other external renderers.
+- `GET|POST /api/emulator/frame`: latest native RGB frame from native or other external renderers. This endpoint remains as an HTTP fallback and inspection endpoint.
+- `GET /api/emulator/frames`: WebSocket stream for native RGB frames. The C++ runner sends compact flat RGB hex frames here and the emulator UI consumes them directly.
 
 ## State Updates
 

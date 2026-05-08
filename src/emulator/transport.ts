@@ -1,5 +1,5 @@
 import { ui } from "./dom.js";
-import { updateFromEmulatorState, updateFromWsMessage, model } from "./model.js";
+import { updateFromEmulatorFrame, updateFromEmulatorState, updateFromWsMessage, model } from "./model.js";
 import { updateReadouts } from "./readouts.js";
 
 export async function loadInitialState() {
@@ -11,6 +11,7 @@ export async function loadInitialState() {
 export function connect() {
   const protocol = location.protocol === "https:" ? "wss:" : "ws:";
   model.ws = new WebSocket(`${protocol}//${location.host}/ws`);
+  connectFrameStream(protocol);
   model.ws.onopen = () => {
     ui.status.textContent = "Connected. Open the WLED UI and change colors/effects.";
   };
@@ -24,13 +25,41 @@ export function connect() {
   };
 }
 
-let lastStatePoll = 0;
-export function pollEmulatorState(now) {
-  if (now - lastStatePoll < 120) return;
-  lastStatePoll = now;
-  fetch("/api/emulator/state")
-    .then((res) => res.json())
-    .then(updateFromEmulatorState)
-    .catch(() => {});
+function connectFrameStream(protocol) {
+  model.frameWs = new WebSocket(`${protocol}//${location.host}/api/emulator/frames`);
+  model.frameWs.onmessage = (event) => {
+    updateFromEmulatorFrame(JSON.parse(event.data));
+  };
+  model.frameWs.onclose = () => {
+    setTimeout(() => connectFrameStream(protocol), 1000);
+  };
 }
 
+let lastStatePoll = 0;
+let lastFramePoll = 0;
+let framePollPending = false;
+
+export function pollEmulatorState(now) {
+  pollNativeFrame(now);
+  if (now - lastStatePoll >= 500) {
+    lastStatePoll = now;
+    fetch("/api/emulator/state")
+      .then((res) => res.json())
+      .then(updateFromEmulatorState)
+      .catch(() => {});
+  }
+}
+
+function pollNativeFrame(now) {
+  if (model.frameWs?.readyState === WebSocket.OPEN) return;
+  if (framePollPending || now - lastFramePoll < 16) return;
+  lastFramePoll = now;
+  framePollPending = true;
+  fetch("/api/emulator/frame")
+    .then((res) => res.json())
+    .then(updateFromEmulatorFrame)
+    .catch(() => {})
+    .finally(() => {
+      framePollPending = false;
+    });
+}

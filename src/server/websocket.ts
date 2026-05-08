@@ -4,6 +4,24 @@ import { applyStateUpdate, renderPreviewLeds } from "./device-state.js";
 import { siJson } from "./wled-json.js";
 
 export function handleUpgrade(req, socket, ctx) {
+  acceptWebSocket(req, socket);
+  ctx.sockets.add(socket);
+  sendWs(socket, siJson(ctx));
+  socket.on("data", (buffer) => handleWsData(socket, buffer, ctx));
+  socket.on("close", () => ctx.sockets.delete(socket));
+  socket.on("error", () => ctx.sockets.delete(socket));
+}
+
+export function handleFrameUpgrade(req, socket, ctx) {
+  acceptWebSocket(req, socket);
+  ctx.frameSockets.add(socket);
+  if (externalFrameLedCount(ctx.externalFrame)) sendWs(socket, ctx.externalFrame);
+  socket.on("data", (buffer) => handleFrameData(buffer, ctx));
+  socket.on("close", () => ctx.frameSockets.delete(socket));
+  socket.on("error", () => ctx.frameSockets.delete(socket));
+}
+
+function acceptWebSocket(req, socket) {
   const key = req.headers["sec-websocket-key"];
   if (!key) {
     socket.destroy();
@@ -20,15 +38,40 @@ export function handleUpgrade(req, socket, ctx) {
     "",
     "",
   ].join("\r\n"));
-  ctx.sockets.add(socket);
-  sendWs(socket, siJson(ctx));
-  socket.on("data", (buffer) => handleWsData(socket, buffer, ctx));
-  socket.on("close", () => ctx.sockets.delete(socket));
-  socket.on("error", () => ctx.sockets.delete(socket));
 }
 
 export function broadcast(ctx, value) {
   for (const socket of ctx.sockets) sendWs(socket, value);
+}
+
+export function updateExternalFrame(ctx, value) {
+  const frame = Number(value?.frame ?? -1);
+  const streamId = String(value?.streamId || value?.source || "external");
+  const sameStream = streamId === (ctx.externalFrame.streamId || ctx.externalFrame.source);
+  if (sameStream && Number.isFinite(frame) && frame >= 0 && frame < (ctx.externalFrame.frame ?? -1)) {
+    return false;
+  }
+  const rgb = typeof value?.rgb === "string" ? normalizeFrameHex(value.rgb) : "";
+  ctx.externalFrame = {
+    leds: Array.isArray(value?.leds) ? value.leds : [],
+    rgb,
+    updatedAt: Date.now(),
+    source: String(value?.source || "external"),
+    frame: Number.isFinite(frame) ? frame : (ctx.externalFrame.frame ?? 0) + 1,
+    streamId,
+  };
+  for (const socket of ctx.frameSockets) sendWs(socket, ctx.externalFrame);
+  return true;
+}
+
+export function externalFrameLedCount(frame) {
+  if (Array.isArray(frame?.leds) && frame.leds.length) return frame.leds.length;
+  if (typeof frame?.rgb === "string") return Math.floor(frame.rgb.length / 6);
+  return 0;
+}
+
+function normalizeFrameHex(value) {
+  return value.replace(/[^a-fA-F0-9]/g, "").toLowerCase();
 }
 
 function handleWsData(socket, buffer, ctx) {
@@ -49,6 +92,17 @@ function handleWsData(socket, buffer, ctx) {
     applyStateUpdate(ctx.state, data, ctx.catalog);
     broadcast(ctx, siJson(ctx));
     if (data.v) sendWs(socket, siJson(ctx));
+  }
+}
+
+function handleFrameData(buffer, ctx) {
+  const messages = decodeWs(buffer);
+  for (const message of messages) {
+    try {
+      updateExternalFrame(ctx, JSON.parse(message));
+    } catch {
+      // Ignore malformed frame payloads.
+    }
   }
 }
 

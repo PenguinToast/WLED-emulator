@@ -9,7 +9,7 @@ import { presetsJson } from "./presets.js";
 import { htmlFile, json, readJsonBody, serveFile, serveStatic, text } from "./responses.js";
 import { clamp, clone } from "./util.js";
 import { applyUpload, isVersionInfoRequest } from "./version-info.js";
-import { broadcast } from "./websocket.js";
+import { broadcast, externalFrameLedCount, updateExternalFrame } from "./websocket.js";
 import { emulatorStateJson, fullJson, infoObject, siJson } from "./wled-json.js";
 
 type HttpOptions = {
@@ -71,13 +71,11 @@ export async function handleHttp(req, res, ctx, options: HttpOptions = {}) {
     }
     if (url.pathname === "/api/emulator/frame" && req.method === "POST") {
       const body = await readJsonBody(req);
-      ctx.externalFrame = {
-        leds: Array.isArray(body?.leds) ? body.leds : [],
-        updatedAt: Date.now(),
-        source: String(body?.source || "external"),
-      };
-      return json(res, { ok: true, count: ctx.externalFrame.leds.length });
+      const fresh = updateExternalFrame(ctx, body);
+      if (!fresh) return json(res, { ok: true, stale: true, count: externalFrameLedCount(ctx.externalFrame) });
+      return json(res, { ok: true, count: externalFrameLedCount(ctx.externalFrame) });
     }
+    if (url.pathname === "/api/emulator/frame") return json(res, ctx.externalFrame);
     if (url.pathname === "/api/emulator/state") return json(res, emulatorStateJson(ctx));
     if (url.pathname === "/emulator") return redirect(res, "/emulator/");
     if (url.pathname === "/emulator/") {

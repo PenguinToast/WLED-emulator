@@ -10,9 +10,17 @@ uint32_t readColor() {
   std::cin >> r >> g >> b;
   return RGBW32(clamp8(r), clamp8(g), clamp8(b), 0);
 }
+
+void writeHexByte(uint8_t value) {
+  static constexpr char digits[] = "0123456789abcdef";
+  std::cout << digits[value >> 4] << digits[value & 0x0f];
+}
 }
 
 int main() {
+  std::ios::sync_with_stdio(false);
+  std::cin.tie(nullptr);
+
   std::vector<CRGB> leds(133);
   EffectContext ctx{leds};
   int stateBrightness = 255;
@@ -59,14 +67,12 @@ int main() {
       if (on && ctx.segment.start < ctx.segment.stop) render(ctx);
     }
 
-    std::cout << "{\"leds\":[";
-    for (size_t i = 0; i < leds.size(); ++i) {
-      if (i) std::cout << ',';
-      std::cout << '['
-                << static_cast<int>(leds[i].r) << ','
-                << static_cast<int>(leds[i].g) << ','
-                << static_cast<int>(leds[i].b) << ']';
+    std::cout << "F ";
+    for (const CRGB& led : leds) {
+      writeHexByte(led.r);
+      writeHexByte(led.g);
+      writeHexByte(led.b);
     }
-    std::cout << "]}" << std::endl;
+    std::cout << '\n' << std::flush;
   }
 }

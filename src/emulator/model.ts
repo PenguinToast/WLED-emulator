@@ -9,6 +9,7 @@ export const model = {
   externalFrame: null,
   leds: [],
   ws: null,
+  frameWs: null,
   frame: 0,
 };
 
@@ -63,6 +64,10 @@ export function updateFromEmulatorState(json) {
   model.paletteData = json.paletteData || model.paletteData;
   model.fixture = json.fixture || json.info?.fixture || model.fixture;
   model.externalFrame = json.externalFrame || model.externalFrame;
+}
+
+export function updateFromEmulatorFrame(json) {
+  model.externalFrame = json || model.externalFrame;
 }
 
 export function updateFromWsMessage(json) {
