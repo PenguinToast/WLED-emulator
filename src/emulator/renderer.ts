@@ -49,16 +49,62 @@ export function drawSpectrum() {
   const width = spectrumCanvas.width;
   const height = spectrumCanvas.height;
   const palette = paletteFor(activeSegment().pal);
+  const ratio = window.devicePixelRatio || 1;
+  const paddingX = 18 * ratio;
+  const paddingTop = 18 * ratio;
+  const labelHeight = 28 * ratio;
+  const valueHeight = 18 * ratio;
+  const plotLeft = paddingX;
+  const plotTop = paddingTop + valueHeight;
+  const plotWidth = Math.max(1, width - paddingX * 2);
+  const plotHeight = Math.max(1, height - plotTop - labelHeight);
+  const barGap = Math.max(3 * ratio, plotWidth * 0.004);
+  const barWidth = Math.max(2 * ratio, plotWidth / audio.bins.length - barGap);
+
   spectrumCtx.clearRect(0, 0, width, height);
   spectrumCtx.fillStyle = "#050605";
   spectrumCtx.fillRect(0, 0, width, height);
-  const barWidth = width / audio.bins.length;
-  for (let i = 0; i < audio.bins.length; i += 1) {
-    const barHeight = Math.max(2, audio.bins[i] * height * 1.25);
-    const color = palette(i / audio.bins.length, 1);
-    spectrumCtx.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
-    spectrumCtx.fillRect(i * barWidth, height - barHeight, Math.max(1, barWidth - 2), barHeight);
+
+  spectrumCtx.strokeStyle = "rgba(255,255,255,0.08)";
+  spectrumCtx.lineWidth = Math.max(1, ratio);
+  for (let i = 0; i <= 4; i += 1) {
+    const y = plotTop + plotHeight * (i / 4);
+    spectrumCtx.beginPath();
+    spectrumCtx.moveTo(plotLeft, y);
+    spectrumCtx.lineTo(plotLeft + plotWidth, y);
+    spectrumCtx.stroke();
   }
+
+  spectrumCtx.textAlign = "center";
+  spectrumCtx.textBaseline = "middle";
+  spectrumCtx.font = `${11 * ratio}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
+
+  for (let i = 0; i < audio.bins.length; i += 1) {
+    const value = clamp(audio.bins[i], 0, 1);
+    const x = plotLeft + i * (plotWidth / audio.bins.length) + barGap / 2;
+    const barHeight = Math.max(2 * ratio, value * plotHeight);
+    const y = plotTop + plotHeight - barHeight;
+    const color = palette(i / audio.bins.length, 1);
+    const gradient = spectrumCtx.createLinearGradient(0, y, 0, plotTop + plotHeight);
+    gradient.addColorStop(0, `rgba(${color[0]}, ${color[1]}, ${color[2]}, 1)`);
+    gradient.addColorStop(1, `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.38)`);
+    spectrumCtx.fillStyle = gradient;
+    spectrumCtx.fillRect(x, y, barWidth, barHeight);
+    spectrumCtx.fillStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.22)`;
+    spectrumCtx.fillRect(x, plotTop + plotHeight - 2 * ratio, barWidth, 2 * ratio);
+
+    const centerX = x + barWidth / 2;
+    spectrumCtx.fillStyle = "rgba(241,245,239,0.78)";
+    spectrumCtx.fillText(value.toFixed(2), centerX, paddingTop);
+    spectrumCtx.fillStyle = "rgba(170,181,168,0.78)";
+    spectrumCtx.fillText(String(i + 1).padStart(2, "0"), centerX, height - labelHeight / 2);
+  }
+
+  spectrumCtx.textAlign = "left";
+  spectrumCtx.fillStyle = "rgba(170,181,168,0.9)";
+  spectrumCtx.fillText("0", plotLeft, plotTop + plotHeight + 1 * ratio);
+  spectrumCtx.textAlign = "right";
+  spectrumCtx.fillText("1", plotLeft + plotWidth, plotTop - 2 * ratio);
 }
 
 function resizeCanvas(target: HTMLCanvasElement) {

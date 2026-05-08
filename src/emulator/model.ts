@@ -22,7 +22,7 @@ export const audio = {
   stream: null,
   timeData: new Uint8Array(2048),
   freqData: new Uint8Array(1024),
-  bins: new Float32Array(64),
+  bins: new Float32Array(16),
   volume: 0,
   bass: 0,
   mid: 0,

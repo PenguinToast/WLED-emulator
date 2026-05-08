@@ -26,8 +26,14 @@
           </nav>
         </header>
 
-        <canvas id="ledCanvas" width="1280" height="580"></canvas>
-        <canvas id="spectrumCanvas" width="1280" height="120"></canvas>
+        <canvas id="ledCanvas" class="ledCanvas" width="1280" height="580"></canvas>
+        <section class="spectrumPanel" aria-label="FFT bins">
+          <div class="spectrumHeader">
+            <h2>FFT Bins</h2>
+            <span>16-band audio payload</span>
+          </div>
+          <canvas id="spectrumCanvas" width="1280" height="170"></canvas>
+        </section>
       </section>
 
       <aside>
