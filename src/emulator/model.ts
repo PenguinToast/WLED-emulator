@@ -76,10 +76,29 @@ export function updateFromEmulatorState(json) {
   model.paletteData = json.paletteData || model.paletteData;
   model.fixture = json.fixture || json.info?.fixture || model.fixture;
   model.externalFrame = json.externalFrame || model.externalFrame;
+  if (json.audio) updateFromEmulatorAudio(json.audio);
 }
 
 export function updateFromEmulatorFrame(json) {
   model.externalFrame = json || model.externalFrame;
+}
+
+export function updateFromEmulatorAudio(json) {
+  if (audio.analyser && audio.source) return;
+  audio.inputKind = json.profile || json.source || "remote";
+  audio.volume = Number(json.volume ?? 0);
+  audio.bass = Number(json.bass ?? 0);
+  audio.mid = Number(json.mid ?? 0);
+  audio.treble = Number(json.treble ?? 0);
+  audio.beat = Boolean(json.beat);
+  audio.bpm = Number(json.bpm ?? 0);
+  audio.majorPeak = Number(json.majorPeak ?? 0);
+  audio.magnitude = Number(json.magnitude ?? 0);
+  if (Array.isArray(json.bins)) {
+    for (let index = 0; index < audio.bins.length; index += 1) {
+      audio.bins[index] = Number(json.bins[index] ?? 0);
+    }
+  }
 }
 
 export function updateFromWsMessage(json) {

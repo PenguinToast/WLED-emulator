@@ -1,5 +1,5 @@
 import { ui } from "./dom.js";
-import { updateFromEmulatorFrame, updateFromEmulatorState, updateFromWsMessage, model } from "./model.js";
+import { updateFromEmulatorAudio, updateFromEmulatorFrame, updateFromEmulatorState, updateFromWsMessage, model } from "./model.js";
 import { updateReadouts } from "./readouts.js";
 
 export async function loadInitialState() {
@@ -30,6 +30,10 @@ function connectFrameStream(protocol) {
   model.frameWs.onmessage = (event) => {
     const message = JSON.parse(event.data);
     if (message?.type === "frame") updateFromEmulatorFrame(message);
+    if (message?.type === "audio") {
+      updateFromEmulatorAudio(message);
+      updateReadouts();
+    }
   };
   model.frameWs.onclose = () => {
     setTimeout(() => connectFrameStream(protocol), 1000);
