@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EDC Audio Capture</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <main class="captureShell">
+      <header>
+        <h1>Audio Capture</h1>
+        <p id="captureStatus">Choose an audio source. This window can stay open while /emulator reloads.</p>
+      </header>
+      <nav>
+        <button id="captureComputerButton" type="button">Computer</button>
+        <button id="captureMicButton" type="button">Mic</button>
+        <button id="captureStopButton" type="button">Stop</button>
+      </nav>
+      <dl>
+        <div><dt>Source</dt><dd id="captureSource">none</dd></div>
+        <div><dt>Volume</dt><dd id="captureVolume">0.00</dd></div>
+        <div><dt>Bass</dt><dd id="captureBass">0.00</dd></div>
+        <div><dt>Peak</dt><dd id="capturePeak">0 Hz</dd></div>
+        <div><dt>Beat</dt><dd id="captureBeat">no</dd></div>
+      </dl>
+    </main>
+    <script type="module" src="/src/emulator/audio-capture.ts"></script>
+  </body>
+</html>

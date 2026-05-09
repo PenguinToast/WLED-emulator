@@ -5,7 +5,7 @@ The emulator browser app analyzes audio with the Web Audio API and streams norma
 ## Sources
 
 - `Mic`: captures microphone input with browser echo cancellation, noise suppression, and automatic gain disabled.
-- `Computer`: captures audio from the browser's screen/share picker through `navigator.mediaDevices.getDisplayMedia()`. Browser support varies: Chrome can usually capture audio from a shared tab, and some browser/OS combinations expose system audio. On macOS, native app output such as the Spotify desktop app may require playing Spotify in a browser tab or routing output through a virtual loopback device.
+- `Computer`: opens `/emulator/audio-capture.html`, a small capture window that requests audio from the browser's screen/share picker through `navigator.mediaDevices.getDisplayMedia()` and streams it to the same emulator bus. Keeping capture in a separate window lets shared audio continue across reloads of the main `/emulator` page. Browser support varies: Chrome can usually capture audio from a shared tab, and some browser/OS combinations expose system audio. On macOS, native app output such as the Spotify desktop app may require playing Spotify in a browser tab or routing output through a virtual loopback device.
 - `File`: plays a local audio file through the hidden audio element and analyzes the same playback stream.
 
 All sources feed the same analyzer, so WLED audio-reactive effects receive the same normalized fields regardless of input source:
@@ -57,6 +57,8 @@ WLED's audio-reactive usermod computes a 512-sample FFT at 22.05 kHz, zeros DC, 
 | 15 | 165-215 | 7106-9259 Hz, damped by 0.70 |
 
 The emulator preserves that fixed-band shape instead of using generic log-spaced bins. Because Web Audio exposes byte magnitudes rather than WLED's raw `arduinoFFT` magnitudes, analyzer gain is calibrated by source type: microphone input uses a WLED-like mic profile, while direct digital audio uses a browser-output profile that lifts the low bins enough for kick drums to register without letting cymbals and upper harmonics dominate every audio-reactive effect.
+
+Bass transients also drive the payload `beat` flag used as WLED's `samplePeak` shim. Effects such as `Ripple Peak` depend on that flag to spawn new ripples, so the detector looks for a low-frequency peak, a fast bass or volume rise, and a short refractory interval instead of using BPM estimation alone.
 
 ## Browser Capture Notes
 

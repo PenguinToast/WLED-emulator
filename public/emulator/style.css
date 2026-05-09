@@ -46,6 +46,16 @@ input[type="file"] { display: none; }
   grid-template-columns: minmax(0, 1fr) 360px;
 }
 
+.captureShell {
+  min-height: 100vh;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 24px;
+  display: grid;
+  align-content: start;
+  gap: 18px;
+}
+
 .preview {
   min-width: 0;
   height: 100vh;

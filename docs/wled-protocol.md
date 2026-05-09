@@ -22,7 +22,8 @@ The active server exposes enough of the WLED HTTP JSON and WebSocket API for the
 
 ## Emulator Endpoints
 
-- `GET /emulator`: virtual LED output with mic, computer/share, file audio input, and native-frame display.
+- `GET /emulator`: virtual LED output with mic, file audio input, persistent computer/share capture launcher, and native-frame display.
+- `GET /emulator/audio-capture.html`: detached mic/computer audio capture window that streams typed audio payloads to `/api/emulator/frames`.
 - `GET /liveview` and `/liveview2D`: lightweight WLED liveview-compatible ring preview.
 - `GET /api/emulator/state`: combined state, info, effect catalog, palette data, audio state, fixture metadata, and latest external frame.
 - `GET|POST /api/emulator/audio`: latest normalized audio state, including volume bands, beat/BPM, major peak frequency, major peak magnitude, source profile, and 16 WLED-shaped analyzer bins. This endpoint remains as an HTTP fallback and inspection endpoint.

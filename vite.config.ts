@@ -9,6 +9,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         emulator: "public/emulator/index.html",
+        audioCapture: "public/emulator/audio-capture.html",
         liveview: "public/emulator/liveview.html",
       },
     },

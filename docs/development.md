@@ -45,6 +45,7 @@ The main active entry points are:
 
 - WLED UI: `http://localhost:5173/`
 - Emulator UI: `http://localhost:5173/emulator`
+- Persistent audio capture: `http://localhost:5173/emulator/audio-capture.html`
 - Lightweight liveview: `http://localhost:5173/liveview`
 
 The old standalone custom-effect prototype is intentionally kept in `legacy/standalone-prototype/` and is not served by `server.ts`.

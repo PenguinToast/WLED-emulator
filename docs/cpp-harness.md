@@ -100,7 +100,7 @@ The host shim implements `UsermodManager::getUMData()` for `USERMOD_ID_AUDIOREAC
 - `u_data[0]`: smoothed volume, `volumeSmth`
 - `u_data[1]`: raw volume, `volumeRaw`
 - `u_data[2]`: 16-bin FFT byte array, `fftResult`, derived from browser analyzer bins after WLED-style post-processing
-- `u_data[3]`: beat flag, `samplePeak`
+- `u_data[3]`: bass transient peak flag, `samplePeak`
 - `u_data[4]`: dominant frequency estimate, `FFT_MajorPeak`
 - `u_data[5]`: FFT magnitude estimate, `my_magnitude`
 - `u_data[6]` and `u_data[7]`: mutable `maxVol` and `binNum` controls used by several SR effects

@@ -1,49 +1,8 @@
 import { ui } from "./dom.js";
 import { audio, model } from "./model.js";
-import { clamp, mix } from "./color.js";
+import { applyAnalyzerTuning, audioPayload, updateAnalyzerAudio, WEB_AUDIO_ANALYSER_SMOOTHING } from "./audio-core.js";
 
-type DisplayAudioConstraints = MediaTrackConstraints & {
-  suppressLocalAudioPlayback?: boolean;
-};
-
-const WLED_SAMPLE_RATE = 22050;
-const WLED_FFT_SAMPLES = 512;
-const WLED_HZ_PER_BIN = WLED_SAMPLE_RATE / WLED_FFT_SAMPLES;
-const WLED_MIC_ANALYZER_GAIN = 150;
-const DIRECT_ANALYZER_GAIN = 110;
-const WEB_AUDIO_ANALYSER_SMOOTHING = 0;
-const WLED_FFT_DOWNSCALE = 0.46;
-const WLED_MANUAL_GAIN = 60 / 40 + 1 / 16;
-const WLED_PINK = [
-  1.7, 1.71, 1.73, 1.78,
-  1.68, 1.56, 1.55, 1.63,
-  1.79, 1.62, 1.8, 2.06,
-  2.47, 3.35, 6.83, 9.55,
-];
-const WLED_BANDS = [
-  [1, 2, 1],
-  [2, 3, 1],
-  [3, 5, 1],
-  [5, 7, 1],
-  [7, 10, 1],
-  [10, 13, 1],
-  [13, 19, 1],
-  [19, 26, 1],
-  [26, 33, 1],
-  [33, 44, 1],
-  [44, 56, 1],
-  [56, 70, 1],
-  [70, 86, 1],
-  [86, 104, 1],
-  [104, 165, 0.88],
-  [165, 215, 0.7],
-];
-const DIRECT_EQ = [
-  4.6, 3.8, 3.0, 2.35,
-  1.8, 1.45, 1.28, 1.15,
-  1.05, 0.98, 0.92, 0.86,
-  0.8, 0.74, 0.68, 0.62,
-];
+const AUDIO_CONTROL_CHANNEL = "edc-wled-audio-control";
 const TUNING_STORAGE_KEY = "edc-wled-audio-tuning";
 
 export function bindAudioTuningControls() {
@@ -80,32 +39,12 @@ export async function startMic() {
 }
 
 export async function startComputerAudio() {
-  try {
-    await ensureAudioContext();
-    disconnectAudio();
-    ui.player.pause();
-    const audioConstraints: DisplayAudioConstraints = {
-      echoCancellation: false,
-      noiseSuppression: false,
-      autoGainControl: false,
-      suppressLocalAudioPlayback: false,
-    };
-    const stream = await navigator.mediaDevices.getDisplayMedia({
-      video: true,
-      audio: audioConstraints,
-    });
-    for (const track of stream.getVideoTracks()) track.stop();
-    if (!stream.getAudioTracks().length) {
-      for (const track of stream.getTracks()) track.stop();
-      throw new Error("No shared audio track was provided. Choose a tab/window that offers audio sharing.");
-    }
-    audio.stream = stream;
-    audio.inputKind = "direct";
-    audio.source = audio.context.createMediaStreamSource(audio.stream);
-    audio.source.connect(audio.analyser);
-    ui.status.textContent = "Computer audio active. Shared audio is driving WLED audio-reactive effects.";
-  } catch (error) {
-    ui.status.textContent = error.message;
+  const capture = window.open("/emulator/audio-capture.html", "edc-wled-audio-capture", "popup,width=520,height=620");
+  if (capture) {
+    capture.focus();
+    ui.status.textContent = "Audio capture opened. Start Computer audio there; it will keep streaming if this page reloads.";
+  } else {
+    ui.status.textContent = "Popup was blocked. Allow popups or open /emulator/audio-capture.html manually.";
   }
 }
 
@@ -129,6 +68,7 @@ export async function loadFile(file) {
 }
 
 export function stopAudio() {
+  broadcastAudioControl({ type: "stop" });
   disconnectAudio();
   ui.player.pause();
   ui.player.removeAttribute("src");
@@ -144,39 +84,7 @@ export function stopAudio() {
 }
 
 export function updateAudio() {
-  if (!audio.analyser) return;
-  audio.analyser.getByteTimeDomainData(audio.timeData);
-  audio.analyser.getByteFrequencyData(audio.freqData);
-  const inputGain = audio.tuning.inputGain;
-  let rms = 0;
-  for (const sample of audio.timeData) {
-    const centered = ((sample - 128) / 128) * inputGain;
-    rms += centered * centered;
-  }
-  audio.volume = clamp(Math.sqrt(rms / audio.timeData.length) * 1.45, 0, 1);
-  const nyquist = audio.context.sampleRate / 2;
-  const hzPerBin = nyquist / audio.freqData.length;
-  const rangeAverage = (fromHz, toHz) => {
-    const from = Math.max(0, Math.floor(fromHz / hzPerBin));
-    const to = Math.min(audio.freqData.length - 1, Math.ceil(toHz / hzPerBin));
-    let sum = 0;
-    for (let i = from; i <= to; i += 1) sum += audio.freqData[i] / 255;
-    return sum / Math.max(1, to - from + 1);
-  };
-  audio.bass = clamp(rangeAverage(20, 180) * inputGain, 0, 1);
-  audio.mid = clamp(rangeAverage(180, 2200) * inputGain, 0, 1);
-  audio.treble = clamp(rangeAverage(2200, 9000) * inputGain, 0, 1);
-  updateWledFftBins(hzPerBin, nyquist);
-  const now = performance.now();
-  audio.beatEnergy = mix(audio.beatEnergy, audio.bass + audio.volume * 0.45, 0.08);
-  audio.beat = audio.bass + audio.volume * 0.45 > audio.beatEnergy * 1.55 && now - audio.lastBeatAt > 230;
-  if (audio.beat) {
-    if (audio.lastBeatAt > 0) {
-      const instantBpm = 60000 / (now - audio.lastBeatAt);
-      if (instantBpm > 60 && instantBpm < 190) audio.bpm = audio.bpm ? mix(audio.bpm, instantBpm, 0.2) : instantBpm;
-    }
-    audio.lastBeatAt = now;
-  }
+  updateAnalyzerAudio(audio);
 }
 
 let lastAudioPost = 0;
@@ -188,20 +96,7 @@ export function postAudio(now) {
 }
 
 function sendAudioPayload() {
-  const payload = {
-    type: "audio",
-    source: "browser",
-    volume: audio.volume,
-    bass: audio.bass,
-    mid: audio.mid,
-    treble: audio.treble,
-    beat: audio.beat,
-    bpm: audio.bpm,
-    majorPeak: audio.majorPeak,
-    magnitude: audio.magnitude,
-    profile: audio.inputKind,
-    bins: Array.from(audio.bins.slice(0, 16)),
-  };
+  const payload = audioPayload(audio);
   if (model.frameWs?.readyState === WebSocket.OPEN) {
     try {
       model.frameWs.send(JSON.stringify(payload));
@@ -217,71 +112,6 @@ function sendAudioPayload() {
   }).catch(() => {});
 }
 
-function updateWledFftBins(hzPerBin, nyquist) {
-  let peakMagnitude = 0;
-  let peakFrequency = 0;
-  const inputGain = audio.tuning.inputGain;
-  const fftGain = audio.tuning.fftGain;
-  const highestWledBin = Math.min(215, Math.floor(nyquist / WLED_HZ_PER_BIN));
-  const peakEnd = Math.min(audio.freqData.length - 1, Math.ceil(((highestWledBin + 1) * WLED_HZ_PER_BIN) / hzPerBin));
-  for (let index = 1; index <= peakEnd; index += 1) {
-    const magnitude = clamp((audio.freqData[index] / 255) * inputGain, 0, 1);
-    if (magnitude > peakMagnitude) {
-      peakMagnitude = magnitude;
-      peakFrequency = (index + 0.5) * hzPerBin;
-    }
-  }
-
-  audio.majorPeak = peakMagnitude > 0.03 ? clamp(peakFrequency, 1, 11025) : 0;
-  audio.magnitude = peakMagnitude;
-
-  const directInput = audio.inputKind === "direct";
-  const analyzerGain = directInput ? DIRECT_ANALYZER_GAIN : WLED_MIC_ANALYZER_GAIN;
-  const profileCurve = directInput ? DIRECT_EQ : WLED_PINK;
-  const gate = audio.tuning.noiseGate;
-  const noiseGateOpen = audio.volume > gate || peakMagnitude > gate * 1.5;
-  for (let index = 0; index < WLED_BANDS.length; index += 1) {
-    const [fromBin, toBin, damping] = WLED_BANDS[index];
-    let fftCalc = noiseGateOpen
-      ? averageWledBinRange(fromBin, toBin, hzPerBin) * analyzerGain * inputGain * fftGain * damping
-      : 0;
-
-    if (noiseGateOpen) {
-      fftCalc *= profileCurve[index] * WLED_FFT_DOWNSCALE * WLED_MANUAL_GAIN;
-      fftCalc = clamp(fftCalc, 0, 1023);
-    }
-
-    if (fftCalc > audio.fftAvg[index]) {
-      audio.fftAvg[index] = fftCalc * 0.75 + audio.fftAvg[index] * 0.25;
-    } else {
-      const release = 0.08 + (1 - audio.tuning.smoothing) * 0.22;
-      audio.fftAvg[index] = fftCalc * release + audio.fftAvg[index] * (1 - release);
-    }
-    audio.fftAvg[index] = clamp(audio.fftAvg[index], 0, 1023);
-
-    let currentResult = audio.fftAvg[index] * 0.38 - 6;
-    currentResult = currentResult > 1 ? Math.sqrt(currentResult) : 0;
-    currentResult *= 0.85 + index / 4.5;
-    audio.bins[index] = clamp((currentResult / 16) * 255, 0, 255) / 255;
-  }
-}
-
-function averageWledBinRange(fromBin, toBin, hzPerBin) {
-  let sum = 0;
-  for (let index = fromBin; index <= toBin; index += 1) {
-    sum += sampleFrequency(index * WLED_HZ_PER_BIN, hzPerBin);
-  }
-  return sum / Math.max(1, toBin - fromBin + 1);
-}
-
-function sampleFrequency(frequency, hzPerBin) {
-  const position = frequency / hzPerBin;
-  const lower = Math.max(0, Math.min(audio.freqData.length - 1, Math.floor(position)));
-  const upper = Math.max(lower, Math.min(audio.freqData.length - 1, lower + 1));
-  const blend = position - lower;
-  return mix(audio.freqData[lower] / 255, audio.freqData[upper] / 255, blend);
-}
-
 async function ensureAudioContext() {
   if (!audio.context) {
     audio.context = new AudioContext();
@@ -294,11 +124,7 @@ async function ensureAudioContext() {
 }
 
 function applyAudioTuning() {
-  audio.tuning.inputGain = clamp(audio.tuning.inputGain, 0.1, 3);
-  audio.tuning.fftGain = clamp(audio.tuning.fftGain, 0.1, 3);
-  audio.tuning.noiseGate = clamp(audio.tuning.noiseGate, 0, 0.15);
-  audio.tuning.smoothing = clamp(audio.tuning.smoothing, 0, 0.95);
-  if (audio.analyser) audio.analyser.smoothingTimeConstant = WEB_AUDIO_ANALYSER_SMOOTHING;
+  applyAnalyzerTuning(audio);
 }
 
 function loadAudioTuning() {
@@ -316,6 +142,7 @@ function loadAudioTuning() {
 
 function saveAudioTuning() {
   localStorage.setItem(TUNING_STORAGE_KEY, JSON.stringify(audio.tuning));
+  broadcastAudioControl({ type: "tuning", tuning: audio.tuning });
 }
 
 function syncAudioTuningControls() {
@@ -349,5 +176,15 @@ function disconnectAudio() {
   if (audio.stream) {
     for (const track of audio.stream.getTracks()) track.stop();
     audio.stream = null;
+  }
+}
+
+function broadcastAudioControl(message) {
+  try {
+    const channel = new BroadcastChannel(AUDIO_CONTROL_CHANNEL);
+    channel.postMessage(message);
+    channel.close();
+  } catch {
+    // BroadcastChannel is optional; local audio still works without it.
   }
 }

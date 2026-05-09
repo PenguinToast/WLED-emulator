@@ -35,6 +35,8 @@ export const audio = {
   bpm: 0,
   majorPeak: 0,
   magnitude: 0,
+  lastBass: 0,
+  lastVolume: 0,
   tuning: {
     inputGain: 1,
     fftGain: 1,
