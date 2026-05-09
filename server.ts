@@ -16,7 +16,7 @@ server.on("upgrade", (req, socket) => {
   const pathname = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`).pathname;
   if (pathname === "/ws") handleUpgrade(req, socket, ctx);
   else if (pathname === "/api/emulator/frames") handleFrameUpgrade(req, socket, ctx);
-  else socket.destroy();
+  else if (!devServer) socket.destroy();
 });
 server.listen(port, () => {
   console.log(`EDC WLED emulator listening on http://localhost:${port}`);
