@@ -1,4 +1,4 @@
-import { loadFile, postAudio, startComputerAudio, startMic, stopAudio, updateAudio } from "./audio.js";
+import { bindAudioTuningControls, loadFile, postAudio, startComputerAudio, startMic, stopAudio, updateAudio } from "./audio.js";
 import { ui } from "./dom.js";
 import { model } from "./model.js";
 import { applyNativeFrame } from "./native-frame.js";
@@ -7,10 +7,16 @@ import { updateReadouts } from "./readouts.js";
 import { connect, loadInitialState, pollEmulatorState } from "./transport.js";
 
 export async function startApp() {
-  bindControls();
-  await loadInitialState();
-  connect();
-  requestAnimationFrame(frame);
+  try {
+    bindAudioTuningControls();
+    bindControls();
+    await loadInitialState();
+    connect();
+    requestAnimationFrame(frame);
+  } catch (error) {
+    ui.status.textContent = error instanceof Error ? error.message : String(error);
+    throw error;
+  }
 }
 
 function bindControls() {

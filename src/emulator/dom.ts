@@ -32,4 +32,12 @@ export const ui = {
   mid: element<HTMLElement>("midReadout"),
   treble: element<HTMLElement>("trebleReadout"),
   bpm: element<HTMLElement>("bpmReadout"),
+  inputGain: element<HTMLInputElement>("inputGainSlider"),
+  inputGainValue: element<HTMLOutputElement>("inputGainValue"),
+  fftGain: element<HTMLInputElement>("fftGainSlider"),
+  fftGainValue: element<HTMLOutputElement>("fftGainValue"),
+  noiseGate: element<HTMLInputElement>("noiseGateSlider"),
+  noiseGateValue: element<HTMLOutputElement>("noiseGateValue"),
+  smoothing: element<HTMLInputElement>("smoothingSlider"),
+  smoothingValue: element<HTMLOutputElement>("smoothingValue"),
 };

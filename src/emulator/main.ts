@@ -1,3 +1,5 @@
 import { startApp } from "./app.js";
 
-await startApp();
+startApp().catch((error) => {
+  console.error(error);
+});

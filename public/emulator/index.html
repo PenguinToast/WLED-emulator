@@ -60,6 +60,28 @@
           <audio id="audioPlayer" controls></audio>
         </section>
 
+        <section>
+          <h2>Audio Tuning</h2>
+          <div class="controls">
+            <label>
+              <span>Input gain <output id="inputGainValue">1.00x</output></span>
+              <input id="inputGainSlider" type="range" min="0.10" max="3.00" step="0.05" value="1.00">
+            </label>
+            <label>
+              <span>FFT gain <output id="fftGainValue">1.00x</output></span>
+              <input id="fftGainSlider" type="range" min="0.10" max="3.00" step="0.05" value="1.00">
+            </label>
+            <label>
+              <span>Noise gate <output id="noiseGateValue">0.02</output></span>
+              <input id="noiseGateSlider" type="range" min="0.00" max="0.15" step="0.005" value="0.02">
+            </label>
+            <label>
+              <span>Smoothing <output id="smoothingValue">0.72</output></span>
+              <input id="smoothingSlider" type="range" min="0.00" max="0.95" step="0.01" value="0.72">
+            </label>
+          </div>
+        </section>
+
       </aside>
     </main>
     <script type="module" src="/src/emulator/main.ts"></script>

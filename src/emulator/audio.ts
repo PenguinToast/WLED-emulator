@@ -9,7 +9,7 @@ type DisplayAudioConstraints = MediaTrackConstraints & {
 const WLED_SAMPLE_RATE = 22050;
 const WLED_FFT_SAMPLES = 512;
 const WLED_HZ_PER_BIN = WLED_SAMPLE_RATE / WLED_FFT_SAMPLES;
-const WLED_MIC_ANALYZER_GAIN = 384;
+const WLED_MIC_ANALYZER_GAIN = 150;
 const DIRECT_ANALYZER_GAIN = 64;
 const WLED_FFT_DOWNSCALE = 0.46;
 const WLED_MANUAL_GAIN = 60 / 40 + 1 / 16;
@@ -38,6 +38,25 @@ const WLED_BANDS = [
   [165, 215, 0.7],
 ];
 const DIRECT_PINK = Array.from({ length: 16 }, () => 1);
+const TUNING_STORAGE_KEY = "edc-wled-audio-tuning";
+
+export function bindAudioTuningControls() {
+  loadAudioTuning();
+  syncAudioTuningControls();
+  const bindSlider = (input, key, valueOutput, formatter) => {
+    input.addEventListener("input", () => {
+      audio.tuning[key] = Number(input.value);
+      valueOutput.textContent = formatter(audio.tuning[key]);
+      applyAudioTuning();
+      saveAudioTuning();
+    });
+  };
+  bindSlider(ui.inputGain, "inputGain", ui.inputGainValue, formatGain);
+  bindSlider(ui.fftGain, "fftGain", ui.fftGainValue, formatGain);
+  bindSlider(ui.noiseGate, "noiseGate", ui.noiseGateValue, formatLevel);
+  bindSlider(ui.smoothing, "smoothing", ui.smoothingValue, formatLevel);
+  applyAudioTuning();
+}
 
 export async function startMic() {
   try {
@@ -122,12 +141,13 @@ export function updateAudio() {
   if (!audio.analyser) return;
   audio.analyser.getByteTimeDomainData(audio.timeData);
   audio.analyser.getByteFrequencyData(audio.freqData);
+  const inputGain = audio.tuning.inputGain;
   let rms = 0;
   for (const sample of audio.timeData) {
-    const centered = (sample - 128) / 128;
+    const centered = ((sample - 128) / 128) * inputGain;
     rms += centered * centered;
   }
-  audio.volume = clamp(Math.sqrt(rms / audio.timeData.length) * 2.4, 0, 1);
+  audio.volume = clamp(Math.sqrt(rms / audio.timeData.length) * 1.45, 0, 1);
   const nyquist = audio.context.sampleRate / 2;
   const hzPerBin = nyquist / audio.freqData.length;
   const rangeAverage = (fromHz, toHz) => {
@@ -137,9 +157,9 @@ export function updateAudio() {
     for (let i = from; i <= to; i += 1) sum += audio.freqData[i] / 255;
     return sum / Math.max(1, to - from + 1);
   };
-  audio.bass = rangeAverage(20, 180);
-  audio.mid = rangeAverage(180, 2200);
-  audio.treble = rangeAverage(2200, 9000);
+  audio.bass = clamp(rangeAverage(20, 180) * inputGain, 0, 1);
+  audio.mid = clamp(rangeAverage(180, 2200) * inputGain, 0, 1);
+  audio.treble = clamp(rangeAverage(2200, 9000) * inputGain, 0, 1);
   updateWledFftBins(hzPerBin, nyquist);
   const now = performance.now();
   audio.beatEnergy = mix(audio.beatEnergy, audio.bass + audio.volume * 0.45, 0.08);
@@ -194,10 +214,12 @@ function sendAudioPayload() {
 function updateWledFftBins(hzPerBin, nyquist) {
   let peakMagnitude = 0;
   let peakFrequency = 0;
+  const inputGain = audio.tuning.inputGain;
+  const fftGain = audio.tuning.fftGain;
   const highestWledBin = Math.min(215, Math.floor(nyquist / WLED_HZ_PER_BIN));
   const peakEnd = Math.min(audio.freqData.length - 1, Math.ceil(((highestWledBin + 1) * WLED_HZ_PER_BIN) / hzPerBin));
   for (let index = 1; index <= peakEnd; index += 1) {
-    const magnitude = audio.freqData[index] / 255;
+    const magnitude = clamp((audio.freqData[index] / 255) * inputGain, 0, 1);
     if (magnitude > peakMagnitude) {
       peakMagnitude = magnitude;
       peakFrequency = (index + 0.5) * hzPerBin;
@@ -210,11 +232,12 @@ function updateWledFftBins(hzPerBin, nyquist) {
   const directInput = audio.inputKind === "direct";
   const analyzerGain = directInput ? DIRECT_ANALYZER_GAIN : WLED_MIC_ANALYZER_GAIN;
   const pinkCurve = directInput ? DIRECT_PINK : WLED_PINK;
-  const noiseGateOpen = audio.volume > 0.01 || peakMagnitude > 0.03;
+  const gate = audio.tuning.noiseGate;
+  const noiseGateOpen = audio.volume > gate || peakMagnitude > gate * 1.5;
   for (let index = 0; index < WLED_BANDS.length; index += 1) {
     const [fromBin, toBin, damping] = WLED_BANDS[index];
     let fftCalc = noiseGateOpen
-      ? averageWledBinRange(fromBin, toBin, hzPerBin) * analyzerGain * damping
+      ? averageWledBinRange(fromBin, toBin, hzPerBin) * analyzerGain * inputGain * fftGain * damping
       : 0;
 
     if (noiseGateOpen) {
@@ -223,9 +246,10 @@ function updateWledFftBins(hzPerBin, nyquist) {
     }
 
     if (fftCalc > audio.fftAvg[index]) {
-      audio.fftAvg[index] = fftCalc * 0.75 + audio.fftAvg[index] * 0.25;
+      audio.fftAvg[index] = fftCalc * 0.6 + audio.fftAvg[index] * 0.4;
     } else {
-      audio.fftAvg[index] = fftCalc * 0.17 + audio.fftAvg[index] * 0.83;
+      const release = 0.08 + (1 - audio.tuning.smoothing) * 0.22;
+      audio.fftAvg[index] = fftCalc * release + audio.fftAvg[index] * (1 - release);
     }
     audio.fftAvg[index] = clamp(audio.fftAvg[index], 0, 1023);
 
@@ -251,9 +275,54 @@ async function ensureAudioContext() {
     audio.context = new AudioContext();
     audio.analyser = audio.context.createAnalyser();
     audio.analyser.fftSize = 2048;
-    audio.analyser.smoothingTimeConstant = 0.72;
+    audio.analyser.smoothingTimeConstant = audio.tuning.smoothing;
   }
+  applyAudioTuning();
   if (audio.context.state === "suspended") await audio.context.resume();
+}
+
+function applyAudioTuning() {
+  audio.tuning.inputGain = clamp(audio.tuning.inputGain, 0.1, 3);
+  audio.tuning.fftGain = clamp(audio.tuning.fftGain, 0.1, 3);
+  audio.tuning.noiseGate = clamp(audio.tuning.noiseGate, 0, 0.15);
+  audio.tuning.smoothing = clamp(audio.tuning.smoothing, 0, 0.95);
+  if (audio.analyser) audio.analyser.smoothingTimeConstant = audio.tuning.smoothing;
+}
+
+function loadAudioTuning() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(TUNING_STORAGE_KEY) || "null");
+    if (!saved || typeof saved !== "object") return;
+    for (const key of ["inputGain", "fftGain", "noiseGate", "smoothing"]) {
+      if (Number.isFinite(saved[key])) audio.tuning[key] = saved[key];
+    }
+    applyAudioTuning();
+  } catch {
+    // Keep defaults when stored tuning is malformed.
+  }
+}
+
+function saveAudioTuning() {
+  localStorage.setItem(TUNING_STORAGE_KEY, JSON.stringify(audio.tuning));
+}
+
+function syncAudioTuningControls() {
+  ui.inputGain.value = String(audio.tuning.inputGain);
+  ui.fftGain.value = String(audio.tuning.fftGain);
+  ui.noiseGate.value = String(audio.tuning.noiseGate);
+  ui.smoothing.value = String(audio.tuning.smoothing);
+  ui.inputGainValue.textContent = formatGain(audio.tuning.inputGain);
+  ui.fftGainValue.textContent = formatGain(audio.tuning.fftGain);
+  ui.noiseGateValue.textContent = formatLevel(audio.tuning.noiseGate);
+  ui.smoothingValue.textContent = formatLevel(audio.tuning.smoothing);
+}
+
+function formatGain(value) {
+  return `${value.toFixed(2)}x`;
+}
+
+function formatLevel(value) {
+  return value.toFixed(3).replace(/0$/, "").replace(/0$/, "");
 }
 
 function disconnectAudio() {

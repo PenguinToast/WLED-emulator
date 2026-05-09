@@ -38,7 +38,7 @@ This project runs the real WLED browser UI and mobile-app protocol against a loc
 - `src/emulator/model.ts`: shared mutable browser model.
 - `src/emulator/dom.ts`: typed DOM element lookup.
 - `src/emulator/transport.ts`: server fetch/poll/WebSocket integration, including the typed native-frame WebSocket bus and HTTP fallback polling.
-- `src/emulator/audio.ts`: Web Audio input from mic, computer/share capture, or file playback; band analysis, beat detection, and audio streaming.
+- `src/emulator/audio.ts`: Web Audio input from mic, computer/share capture, or file playback; analyzer tuning; band analysis; beat detection; and audio streaming.
 - `src/emulator/native-frame.ts`: native-frame consumer for the virtual output; it does not approximate WLED effects in JavaScript.
 - `src/emulator/renderer.ts`: ring canvas and spectrum canvas painting.
 - `src/emulator/color.ts`: color math, palette interpolation, and effect helper API.

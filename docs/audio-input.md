@@ -20,7 +20,18 @@ All sources feed the same analyzer, so WLED audio-reactive effects receive the s
 - major peak magnitude
 - 16 analyzer bins, shown in the emulator FFT visualizer below the LED preview
 
-The browser streams this audio state once per animation frame, typically around 60 times per second, on the same WebSocket used for native RGB frames. The 16 FFT bins are shaped to match WLED audio-reactive `fftResult` as closely as the browser analyzer allows: the emulator maps browser FFT data into WLED's 22.05 kHz, 512-sample GEQ ranges, applies default manual gain, rise/fall smoothing, and square-root `FFTScalingMode = 3`. Microphone input keeps WLED's pink-noise compensation and higher mic-style analyzer gain. Direct digital sources, meaning File and Computer audio, skip WLED's mic pink table and use lower analyzer gain so mastered audio does not pin every `fftResult` bin at 255. The C++ runner receives those already-scaled `fftResult` values from the frame bus and only falls back to `GET /api/emulator/audio` when the WebSocket is unavailable.
+The browser streams this audio state once per animation frame, typically around 60 times per second, on the same WebSocket used for native RGB frames. The 16 FFT bins are shaped to match WLED audio-reactive `fftResult` as closely as the browser analyzer allows: the emulator maps browser FFT data into WLED's 22.05 kHz, 512-sample GEQ ranges, applies default manual gain, rise/fall smoothing, and square-root `FFTScalingMode = 3`. Microphone input keeps WLED's pink-noise compensation, but its default analyzer gain is lower than WLED's embedded mic path because browser/OS mic capture can already be pre-amplified. Direct digital sources, meaning File and Computer audio, skip WLED's mic pink table and use lower analyzer gain so mastered audio does not pin every `fftResult` bin at 255. The C++ runner receives those already-scaled `fftResult` values from the frame bus and only falls back to `GET /api/emulator/audio` when the WebSocket is unavailable.
+
+## Tuning Controls
+
+The emulator exposes local audio tuning sliders in the `/emulator` sidebar. These settings are stored in browser `localStorage` and affect only the analyzer payload sent to the native runner:
+
+- `Input gain`: scales time-domain volume and browser FFT magnitudes before WLED-shaped processing.
+- `FFT gain`: scales the 16 WLED-shaped FFT bins without changing the volume readout as aggressively.
+- `Noise gate`: suppresses quiet room noise and low-level FFT leakage before bins are smoothed.
+- `Smoothing`: updates the Web Audio analyzer smoothing and the release speed of the WLED-shaped FFT bins.
+
+For microphone testing, lower `Input gain` first if the FFT bars sit near `1.00` while the room is only moderately loud. Lower `FFT gain` if volume looks reasonable but audio-reactive effects still pin every bin.
 
 ## WLED FFT Shape
 

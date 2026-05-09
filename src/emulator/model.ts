@@ -35,6 +35,12 @@ export const audio = {
   bpm: 0,
   majorPeak: 0,
   magnitude: 0,
+  tuning: {
+    inputGain: 1,
+    fftGain: 1,
+    noiseGate: 0.02,
+    smoothing: 0.72,
+  },
 };
 
 export function activeSegment() {
