@@ -2,7 +2,8 @@ import { clamp, paletteFor } from "./color.js";
 import { canvas, ctx, spectrumCanvas, spectrumCtx } from "./dom.js";
 import { activeSegment, audio, model } from "./model.js";
 
-const DISPLAY_GAIN = 2.4;
+const DISPLAY_GAIN = 1.8;
+const DISPLAY_GAMMA = 0.72;
 
 export function draw() {
   resizeCanvas(canvas);
@@ -118,9 +119,9 @@ function resizeCanvas(target: HTMLCanvasElement) {
 
 function paintLed(x, y, radius, color) {
   color ||= [0, 0, 0];
-  const r = clamp(color[0] * DISPLAY_GAIN);
-  const g = clamp(color[1] * DISPLAY_GAIN);
-  const b = clamp(color[2] * DISPLAY_GAIN);
+  const r = displayChannel(color[0]);
+  const g = displayChannel(color[1]);
+  const b = displayChannel(color[2]);
   const glow = ctx.createRadialGradient(x, y, 0, x, y, radius * 3.1);
   glow.addColorStop(0, `rgba(${r}, ${g}, ${b}, 1)`);
   glow.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, 0.46)`);
@@ -133,4 +134,9 @@ function paintLed(x, y, radius, color) {
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
   ctx.fill();
+}
+
+function displayChannel(value) {
+  if (!value) return 0;
+  return clamp(Math.pow(clamp(value) / 255, DISPLAY_GAMMA) * 255 * DISPLAY_GAIN);
 }

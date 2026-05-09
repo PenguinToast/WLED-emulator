@@ -62,7 +62,7 @@ Native frame transport uses compact flat RGB hex strings end to end. The C++ pro
 
 Audio transport uses the same emulator bus. Browser audio sources send typed `audio` messages over `/api/emulator/frames`; the C++ runner consumes those messages directly and only falls back to the HTTP audio endpoint when the bus is unavailable.
 
-Native RGB frames already include WLED brightness from the C++ harness, so the browser renderer draws them without applying WLED brightness a second time. It does apply a canvas-only display gain so low-amplitude upstream effects remain visible on screen.
+Native RGB frames already include WLED's final output brightness from the C++ harness. The harness keeps global brightness out of the effect feedback loop and applies it only when serializing the frame, matching WLED's output/show boundary more closely. The browser renderer draws those native frame values without applying WLED brightness a second time, but it does apply a canvas-only perceptual display curve so low-amplitude upstream effects remain visible on screen.
 
 The native harness keeps WLED segment environment state inside `HostStrip` segments keyed by the WLED segment ID passed from `tools/run-cpp-effect.mjs`, so upstream effects that allocate `SEGENV.data` or depend on `SEGENV.call` can evolve across frames independently on each ring.
 

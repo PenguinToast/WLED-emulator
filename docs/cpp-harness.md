@@ -39,6 +39,8 @@ npm run cpp:generate
 
 The runner now sends the full WLED segment list to the native process each frame. Each segment is rendered with its own `id`, `start`, `stop`, brightness, mode, speed, intensity, custom effect sliders (`c1`/`c2`/`c3`), option toggles (`o1`/`o2`/`o3`), sound simulation selector (`si`), palette, and color slots, matching the daisy-chained ring fixture more closely than the earlier single-segment path.
 
+Segment brightness is applied inside the upstream effect shim through `SEGMENT.opacity`, while global WLED brightness is applied only when the harness writes the final RGB frame. This keeps low global brightness from feeding back into effects that read, shift, blur, or fade existing pixels between frames.
+
 Native segment state is persistent per segment ID. `SEGENV.data`, `SEGENV.call`, and related fields are preserved across frames unless an effect requests more scratch memory, which is required for upstream modes such as Bouncing Balls and Aurora. The scratch buffer is aligned like `calloc()` memory because upstream effects commonly cast `SEGENV.data` to typed arrays and small structs.
 
 The 1D shim also decodes WLED's virtual-strip pixel indexes back to local segment coordinates. Several upstream 1D effects use that encoding even when there is only one virtual strip.

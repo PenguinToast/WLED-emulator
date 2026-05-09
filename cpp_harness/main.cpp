@@ -16,6 +16,10 @@ void writeHexByte(uint8_t value) {
   std::cout << digits[value >> 4] << digits[value & 0x0f];
 }
 
+uint8_t applyOutputBrightness(uint8_t value, int brightness) {
+  return clamp8((uint16_t(value) * uint16_t(std::max(0, std::min(255, brightness))) + 127U) / 255U);
+}
+
 void clearRange(std::vector<CRGB>& leds, int start, int stop) {
   const int from = std::max(0, std::min<int>(start, leds.size()));
   const int to = std::max(from, std::min<int>(stop, leds.size()));
@@ -78,7 +82,7 @@ int main() {
       ctx.segment.id = clamp8(id);
       ctx.segment.start = std::max(0, std::min<int>(start, leds.size()));
       ctx.segment.stop = std::max<int>(ctx.segment.start, std::min<int>(stop, leds.size()));
-      ctx.segment.brightness = on ? clamp8((brightness * stateBrightness) / 255.0f) : 0;
+      ctx.segment.brightness = on ? clamp8(brightness) : 0;
       ctx.segment.mode = clamp8(mode);
       ctx.segment.speed = clamp8(speed);
       ctx.segment.intensity = clamp8(intensity);
@@ -100,9 +104,9 @@ int main() {
 
     std::cout << "F ";
     for (const CRGB& led : leds) {
-      writeHexByte(led.r);
-      writeHexByte(led.g);
-      writeHexByte(led.b);
+      writeHexByte(applyOutputBrightness(led.r, stateBrightness));
+      writeHexByte(applyOutputBrightness(led.g, stateBrightness));
+      writeHexByte(applyOutputBrightness(led.b, stateBrightness));
     }
     std::cout << '\n' << std::flush;
   }
