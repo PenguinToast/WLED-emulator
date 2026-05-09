@@ -32,6 +32,7 @@ export const ui = {
   mid: element<HTMLElement>("midReadout"),
   treble: element<HTMLElement>("trebleReadout"),
   bpm: element<HTMLElement>("bpmReadout"),
+  beatIndicator: element<HTMLElement>("beatIndicator"),
   inputGain: element<HTMLInputElement>("inputGainSlider"),
   inputGainValue: element<HTMLOutputElement>("inputGainValue"),
   fftGain: element<HTMLInputElement>("fftGainSlider"),

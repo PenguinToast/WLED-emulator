@@ -30,7 +30,10 @@
         <section class="spectrumPanel" aria-label="FFT bins">
           <div class="spectrumHeader">
             <h2>FFT Bins</h2>
-            <span>16-band audio payload, bass to highs left-to-right</span>
+            <div class="spectrumMeta">
+              <span id="beatIndicator" class="beatIndicator">Beat</span>
+              <span>16-band audio payload, bass to highs left-to-right</span>
+            </div>
           </div>
           <canvas id="spectrumCanvas" width="1280" height="170"></canvas>
           <div class="controls" aria-label="Audio tuning">

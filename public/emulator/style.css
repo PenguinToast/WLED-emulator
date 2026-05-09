@@ -133,6 +133,35 @@ canvas {
   font-size: 12px;
 }
 
+.spectrumMeta {
+  display: flex;
+  align-items: center;
+  justify-content: end;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+  text-align: right;
+}
+
+.beatIndicator {
+  min-width: 48px;
+  border: 1px solid rgba(255, 122, 112, 0.38);
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: rgba(255, 122, 112, 0.12);
+  color: rgba(170, 181, 168, 0.82);
+  font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  text-align: center;
+  text-transform: uppercase;
+  transition: background 90ms ease, box-shadow 90ms ease, color 90ms ease;
+}
+
+.beatIndicator.active {
+  background: rgba(255, 122, 112, 0.72);
+  box-shadow: 0 0 16px rgba(255, 122, 112, 0.52);
+  color: #fff4e8;
+}
+
 #spectrumCanvas {
   height: 170px;
 }

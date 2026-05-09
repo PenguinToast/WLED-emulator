@@ -1,9 +1,12 @@
 import { clamp, paletteFor } from "./color.js";
-import { canvas, ctx, spectrumCanvas, spectrumCtx } from "./dom.js";
+import { canvas, ctx, spectrumCanvas, spectrumCtx, ui } from "./dom.js";
 import { activeSegment, audio, model } from "./model.js";
 
 const DISPLAY_GAIN = 1.8;
 const DISPLAY_GAMMA = 0.72;
+const BEAT_FLASH_MS = 220;
+
+let lastBeatAt = 0;
 
 export function draw() {
   resizeCanvas(canvas);
@@ -47,6 +50,10 @@ export function draw() {
 
 export function drawSpectrum() {
   resizeCanvas(spectrumCanvas);
+  const now = performance.now();
+  if (audio.beat) lastBeatAt = now;
+  const beatStrength = clamp(1 - (now - lastBeatAt) / BEAT_FLASH_MS, 0, 1);
+  ui.beatIndicator.classList.toggle("active", beatStrength > 0);
   const width = spectrumCanvas.width;
   const height = spectrumCanvas.height;
   const palette = paletteFor(activeSegment().pal);
@@ -65,6 +72,7 @@ export function drawSpectrum() {
   spectrumCtx.clearRect(0, 0, width, height);
   spectrumCtx.fillStyle = "#050605";
   spectrumCtx.fillRect(0, 0, width, height);
+  if (beatStrength > 0) drawBeatFlash(plotLeft, plotTop, plotWidth, plotHeight, beatStrength, ratio);
 
   spectrumCtx.strokeStyle = "rgba(255,255,255,0.08)";
   spectrumCtx.lineWidth = Math.max(1, ratio);
@@ -139,4 +147,21 @@ function paintLed(x, y, radius, color) {
 function displayChannel(value) {
   if (!value) return 0;
   return clamp(Math.pow(clamp(value) / 255, DISPLAY_GAMMA) * 255 * DISPLAY_GAIN);
+}
+
+function drawBeatFlash(x, y, width, height, strength, ratio) {
+  const bassWidth = width * 0.28;
+  const alpha = 0.08 + strength * 0.24;
+  const gradient = spectrumCtx.createLinearGradient(x, y, x + bassWidth, y);
+  gradient.addColorStop(0, `rgba(255, 122, 112, ${alpha})`);
+  gradient.addColorStop(0.55, `rgba(102, 210, 164, ${alpha * 0.7})`);
+  gradient.addColorStop(1, "rgba(102, 210, 164, 0)");
+  spectrumCtx.fillStyle = gradient;
+  spectrumCtx.fillRect(x, y, bassWidth, height);
+  spectrumCtx.strokeStyle = `rgba(255, 122, 112, ${0.35 + strength * 0.45})`;
+  spectrumCtx.lineWidth = Math.max(1, ratio * 2);
+  spectrumCtx.beginPath();
+  spectrumCtx.moveTo(x, y + height);
+  spectrumCtx.lineTo(x + bassWidth, y + height);
+  spectrumCtx.stroke();
 }
