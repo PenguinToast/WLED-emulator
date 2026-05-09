@@ -1,6 +1,5 @@
 import type { Server } from "node:http";
 import type { ViteDevServer } from "vite";
-import { createServer as createViteServer } from "vite";
 
 import { rootDir } from "./config.js";
 
@@ -8,6 +7,7 @@ export type DevServer = ViteDevServer;
 
 export async function createDevServer(httpServer: Server): Promise<DevServer | null> {
   if (process.env.EDC_DEV_SERVER !== "1") return null;
+  const { createServer: createViteServer } = await import("vite");
   return createViteServer({
     root: rootDir,
     appType: "custom",

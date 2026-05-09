@@ -1,7 +1,6 @@
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 
-export const rootDir = fileURLToPath(new URL("../../", import.meta.url));
+export const rootDir = process.cwd();
 export const publicDir = join(rootDir, "public");
 export const wledDir = join(publicDir, "wled");
 export const emulatorDir = join(publicDir, "emulator");
