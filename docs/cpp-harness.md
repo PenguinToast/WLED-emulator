@@ -95,7 +95,7 @@ The JSON effect catalog is derived from the generated native dispatch table. Uns
 
 The server consumes `upstream_fx_1d_modes.json` for this supported-mode contract. Keep that as the boundary between native generation and WLED protocol serving; server modules should not inspect generated C++ headers or source files.
 
-The host shim implements `UsermodManager::getUMData()` for `USERMOD_ID_AUDIOREACTIVE` and feeds the upstream `um_data_t` fields from emulator audio. Browser audio values arrive normalized from `0.0` to `1.0`; the shim applies a simple AGC-style square-root curve for `volumeSmth` so short ring segments still move under normal music levels. The browser audio analyzer now emits WLED-shaped `fftResult` bins directly, using WLED's fixed GEQ ranges, pink-noise compensation, smoothing, and square-root scaling. The shim maps those normalized values to bytes without adding another curve, so C++ audio-reactive effects consume the same kind of `fftResult[16]` they read in WLED.
+The host shim implements `UsermodManager::getUMData()` for `USERMOD_ID_AUDIOREACTIVE` and feeds the upstream `um_data_t` fields from emulator audio. Browser audio values arrive normalized from `0.0` to `1.0`; the shim applies a simple AGC-style square-root curve for `volumeSmth` so short ring segments still move under normal music levels. The browser audio analyzer now emits WLED-shaped `fftResult` bins directly, using WLED's fixed GEQ ranges, source-specific frequency compensation, smoothing, and square-root scaling. The shim maps those normalized values to bytes without adding another curve, so C++ audio-reactive effects consume the same kind of `fftResult[16]` they read in WLED.
 
 - `u_data[0]`: smoothed volume, `volumeSmth`
 - `u_data[1]`: raw volume, `volumeRaw`

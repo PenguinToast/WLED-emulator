@@ -20,7 +20,7 @@ All sources feed the same analyzer, so WLED audio-reactive effects receive the s
 - major peak magnitude
 - 16 analyzer bins, shown in the emulator FFT visualizer below the LED preview
 
-The browser streams this audio state once per animation frame, typically around 60 times per second, on the same WebSocket used for native RGB frames. The 16 FFT bins are shaped to match WLED audio-reactive `fftResult` as closely as the browser analyzer allows: the emulator maps browser FFT data into WLED's 22.05 kHz, 512-sample GEQ ranges, applies default manual gain, rise/fall smoothing, and square-root `FFTScalingMode = 3`. Microphone input keeps WLED's pink-noise compensation, but its default analyzer gain is lower than WLED's embedded mic path because browser/OS mic capture can already be pre-amplified. Direct digital sources, meaning File and Computer audio, skip WLED's mic pink table and use lower analyzer gain so mastered audio does not pin every `fftResult` bin at 255. The C++ runner receives those already-scaled `fftResult` values from the frame bus and only falls back to `GET /api/emulator/audio` when the WebSocket is unavailable.
+The browser streams this audio state once per animation frame, typically around 60 times per second, on the same WebSocket used for native RGB frames. The 16 FFT bins are shaped to match WLED audio-reactive `fftResult` as closely as the browser analyzer allows: the emulator resamples browser FFT data at WLED's 22.05 kHz, 512-sample raw FFT bin centers, averages those into WLED's GEQ ranges, applies default manual gain, rise/fall smoothing, and square-root `FFTScalingMode = 3`. Microphone input keeps WLED's pink-noise compensation, but its default analyzer gain is lower than WLED's embedded mic path because browser/OS mic capture can already be pre-amplified. Direct digital sources, meaning File and Computer audio, use a browser-output profile with a low-frequency lift and high-band restraint so mastered audio kick and bass energy remains visible after WLED's high-bin post-scaling. The C++ runner receives those already-scaled `fftResult` values from the frame bus and only falls back to `GET /api/emulator/audio` when the WebSocket is unavailable.
 
 ## Tuning Controls
 
@@ -29,7 +29,7 @@ The emulator exposes local audio tuning sliders directly below the FFT visualize
 - `Input gain`: scales time-domain volume and browser FFT magnitudes before WLED-shaped processing.
 - `FFT gain`: scales the 16 WLED-shaped FFT bins without changing the volume readout as aggressively.
 - `Noise gate`: suppresses quiet room noise and low-level FFT leakage before bins are smoothed.
-- `Smoothing`: updates the Web Audio analyzer smoothing and the release speed of the WLED-shaped FFT bins.
+- `Smoothing`: updates the release speed of the WLED-shaped FFT bins. Browser analyzer smoothing stays disabled so short kick and bass transients reach the WLED-style post-processing path.
 
 For microphone testing, lower `Input gain` first if the FFT bars sit near `1.00` while the room is only moderately loud. Lower `FFT gain` if volume looks reasonable but audio-reactive effects still pin every bin.
 
@@ -56,7 +56,7 @@ WLED's audio-reactive usermod computes a 512-sample FFT at 22.05 kHz, zeros DC, 
 | 14 | 104-165 | 4479-7106 Hz, damped by 0.88 |
 | 15 | 165-215 | 7106-9259 Hz, damped by 0.70 |
 
-The emulator preserves that fixed-band shape instead of using generic log-spaced bins. Because Web Audio exposes byte magnitudes rather than WLED's raw `arduinoFFT` magnitudes, analyzer gain is calibrated by source type: microphone input uses a WLED-like mic profile, while direct digital audio uses a flatter profile to avoid carrying over microphone-specific quirks into already-mastered audio.
+The emulator preserves that fixed-band shape instead of using generic log-spaced bins. Because Web Audio exposes byte magnitudes rather than WLED's raw `arduinoFFT` magnitudes, analyzer gain is calibrated by source type: microphone input uses a WLED-like mic profile, while direct digital audio uses a browser-output profile that lifts the low bins enough for kick drums to register without letting cymbals and upper harmonics dominate every audio-reactive effect.
 
 ## Browser Capture Notes
 

@@ -10,7 +10,8 @@ const WLED_SAMPLE_RATE = 22050;
 const WLED_FFT_SAMPLES = 512;
 const WLED_HZ_PER_BIN = WLED_SAMPLE_RATE / WLED_FFT_SAMPLES;
 const WLED_MIC_ANALYZER_GAIN = 150;
-const DIRECT_ANALYZER_GAIN = 64;
+const DIRECT_ANALYZER_GAIN = 110;
+const WEB_AUDIO_ANALYSER_SMOOTHING = 0;
 const WLED_FFT_DOWNSCALE = 0.46;
 const WLED_MANUAL_GAIN = 60 / 40 + 1 / 16;
 const WLED_PINK = [
@@ -37,7 +38,12 @@ const WLED_BANDS = [
   [104, 165, 0.88],
   [165, 215, 0.7],
 ];
-const DIRECT_PINK = Array.from({ length: 16 }, () => 1);
+const DIRECT_EQ = [
+  4.6, 3.8, 3.0, 2.35,
+  1.8, 1.45, 1.28, 1.15,
+  1.05, 0.98, 0.92, 0.86,
+  0.8, 0.74, 0.68, 0.62,
+];
 const TUNING_STORAGE_KEY = "edc-wled-audio-tuning";
 
 export function bindAudioTuningControls() {
@@ -231,7 +237,7 @@ function updateWledFftBins(hzPerBin, nyquist) {
 
   const directInput = audio.inputKind === "direct";
   const analyzerGain = directInput ? DIRECT_ANALYZER_GAIN : WLED_MIC_ANALYZER_GAIN;
-  const pinkCurve = directInput ? DIRECT_PINK : WLED_PINK;
+  const profileCurve = directInput ? DIRECT_EQ : WLED_PINK;
   const gate = audio.tuning.noiseGate;
   const noiseGateOpen = audio.volume > gate || peakMagnitude > gate * 1.5;
   for (let index = 0; index < WLED_BANDS.length; index += 1) {
@@ -241,12 +247,12 @@ function updateWledFftBins(hzPerBin, nyquist) {
       : 0;
 
     if (noiseGateOpen) {
-      fftCalc *= pinkCurve[index] * WLED_FFT_DOWNSCALE * WLED_MANUAL_GAIN;
+      fftCalc *= profileCurve[index] * WLED_FFT_DOWNSCALE * WLED_MANUAL_GAIN;
       fftCalc = clamp(fftCalc, 0, 1023);
     }
 
     if (fftCalc > audio.fftAvg[index]) {
-      audio.fftAvg[index] = fftCalc * 0.6 + audio.fftAvg[index] * 0.4;
+      audio.fftAvg[index] = fftCalc * 0.75 + audio.fftAvg[index] * 0.25;
     } else {
       const release = 0.08 + (1 - audio.tuning.smoothing) * 0.22;
       audio.fftAvg[index] = fftCalc * release + audio.fftAvg[index] * (1 - release);
@@ -261,13 +267,19 @@ function updateWledFftBins(hzPerBin, nyquist) {
 }
 
 function averageWledBinRange(fromBin, toBin, hzPerBin) {
-  const fromHz = fromBin * WLED_HZ_PER_BIN;
-  const toHz = (toBin + 1) * WLED_HZ_PER_BIN;
-  const from = Math.max(1, Math.floor(fromHz / hzPerBin));
-  const to = Math.min(audio.freqData.length - 1, Math.max(from, Math.ceil(toHz / hzPerBin)));
   let sum = 0;
-  for (let index = from; index <= to; index += 1) sum += audio.freqData[index] / 255;
-  return sum / Math.max(1, to - from + 1);
+  for (let index = fromBin; index <= toBin; index += 1) {
+    sum += sampleFrequency(index * WLED_HZ_PER_BIN, hzPerBin);
+  }
+  return sum / Math.max(1, toBin - fromBin + 1);
+}
+
+function sampleFrequency(frequency, hzPerBin) {
+  const position = frequency / hzPerBin;
+  const lower = Math.max(0, Math.min(audio.freqData.length - 1, Math.floor(position)));
+  const upper = Math.max(lower, Math.min(audio.freqData.length - 1, lower + 1));
+  const blend = position - lower;
+  return mix(audio.freqData[lower] / 255, audio.freqData[upper] / 255, blend);
 }
 
 async function ensureAudioContext() {
@@ -275,7 +287,7 @@ async function ensureAudioContext() {
     audio.context = new AudioContext();
     audio.analyser = audio.context.createAnalyser();
     audio.analyser.fftSize = 2048;
-    audio.analyser.smoothingTimeConstant = audio.tuning.smoothing;
+    audio.analyser.smoothingTimeConstant = WEB_AUDIO_ANALYSER_SMOOTHING;
   }
   applyAudioTuning();
   if (audio.context.state === "suspended") await audio.context.resume();
@@ -286,7 +298,7 @@ function applyAudioTuning() {
   audio.tuning.fftGain = clamp(audio.tuning.fftGain, 0.1, 3);
   audio.tuning.noiseGate = clamp(audio.tuning.noiseGate, 0, 0.15);
   audio.tuning.smoothing = clamp(audio.tuning.smoothing, 0, 0.95);
-  if (audio.analyser) audio.analyser.smoothingTimeConstant = audio.tuning.smoothing;
+  if (audio.analyser) audio.analyser.smoothingTimeConstant = WEB_AUDIO_ANALYSER_SMOOTHING;
 }
 
 function loadAudioTuning() {
