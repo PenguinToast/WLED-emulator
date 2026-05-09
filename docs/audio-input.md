@@ -24,7 +24,7 @@ The browser streams this audio state once per animation frame, typically around 
 
 ## Tuning Controls
 
-The emulator exposes local audio tuning sliders in the `/emulator` sidebar. These settings are stored in browser `localStorage` and affect only the analyzer payload sent to the native runner:
+The emulator exposes local audio tuning sliders directly below the FFT visualizer on `/emulator`. These settings are stored in browser `localStorage` and affect only the analyzer payload sent to the native runner:
 
 - `Input gain`: scales time-domain volume and browser FFT magnitudes before WLED-shaped processing.
 - `FFT gain`: scales the 16 WLED-shaped FFT bins without changing the volume readout as aggressively.
