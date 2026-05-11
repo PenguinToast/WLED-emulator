@@ -5,14 +5,15 @@ import { applyStateUpdate, renderPreviewLeds } from "./device-state.js";
 import { siJson } from "./wled-json.js";
 
 const partialFrames = new WeakMap();
+const MAX_WS_PARTIAL_BYTES = 1024 * 1024;
 
 export function handleUpgrade(req, socket, ctx) {
   if (!acceptWebSocket(req, socket)) return;
   ctx.sockets.add(socket);
   sendWs(socket, siJson(ctx));
   socket.on("data", (buffer) => handleWsData(socket, buffer, ctx));
-  socket.on("close", () => ctx.sockets.delete(socket));
-  socket.on("error", () => ctx.sockets.delete(socket));
+  socket.on("close", () => removeSocket(ctx.sockets, socket));
+  socket.on("error", () => removeSocket(ctx.sockets, socket));
 }
 
 export function handleFrameUpgrade(req, socket, ctx) {
@@ -21,8 +22,8 @@ export function handleFrameUpgrade(req, socket, ctx) {
   if (externalFrameLedCount(ctx.externalFrame)) sendWs(socket, frameMessage(ctx.externalFrame));
   sendWs(socket, audioMessage(ctx.audio));
   socket.on("data", (buffer) => handleFrameData(socket, buffer, ctx));
-  socket.on("close", () => ctx.frameSockets.delete(socket));
-  socket.on("error", () => ctx.frameSockets.delete(socket));
+  socket.on("close", () => removeSocket(ctx.frameSockets, socket));
+  socket.on("error", () => removeSocket(ctx.frameSockets, socket));
 }
 
 function acceptWebSocket(req, socket) {
@@ -42,14 +43,18 @@ function acceptWebSocket(req, socket) {
     "",
     "",
   ].join("\r\n"));
+  socket.setNoDelay(true);
+  socket.setKeepAlive(true, 15000);
   return true;
 }
 
 export function broadcast(ctx, value) {
-  for (const socket of ctx.sockets) sendWs(socket, value);
+  for (const socket of ctx.sockets) {
+    if (!sendWs(socket, value)) removeSocket(ctx.sockets, socket);
+  }
 }
 
-export function updateExternalFrame(ctx, value) {
+export function updateExternalFrame(ctx, value, excludeSocket = null) {
   const frame = Number(value?.frame ?? -1);
   const streamId = String(value?.streamId || value?.source || "external");
   const sameStream = streamId === (ctx.externalFrame.streamId || ctx.externalFrame.source);
@@ -65,7 +70,10 @@ export function updateExternalFrame(ctx, value) {
     frame: Number.isFinite(frame) ? frame : (ctx.externalFrame.frame ?? 0) + 1,
     streamId,
   };
-  for (const socket of ctx.frameSockets) sendWs(socket, frameMessage(ctx.externalFrame));
+  for (const socket of ctx.frameSockets) {
+    if (socket === excludeSocket) continue;
+    if (!sendWs(socket, frameMessage(ctx.externalFrame))) removeSocket(ctx.frameSockets, socket);
+  }
   return true;
 }
 
@@ -119,9 +127,12 @@ function handleFrameData(socket, buffer, ctx) {
       const data = JSON.parse(message);
       if (data?.type === "audio") {
         updateAudioState(ctx, data);
-        for (const socket of ctx.frameSockets) sendWs(socket, audioMessage(ctx.audio));
+        for (const frameSocket of ctx.frameSockets) {
+          if (frameSocket === socket) continue;
+          if (!sendWs(frameSocket, audioMessage(ctx.audio))) removeSocket(ctx.frameSockets, frameSocket);
+        }
       } else if (data?.type === "frame") {
-        updateExternalFrame(ctx, data);
+        updateExternalFrame(ctx, data, socket);
       }
     } catch {
       // Ignore malformed frame payloads.
@@ -156,14 +167,21 @@ function decodeWs(socket, chunk) {
     if (offset + length > buffer.length) return rememberPartial(socket, buffer, frameStart, messages);
     const payload = Buffer.from(buffer.subarray(offset, offset + length));
     offset += length;
-    if (opcode === 8) {
-      partialFrames.delete(socket);
-      return messages;
-    }
-    if (opcode !== 1) continue;
     if (mask) {
       for (let i = 0; i < payload.length; i += 1) payload[i] ^= mask[i % 4];
     }
+    if (opcode === 8) {
+      sendWsControl(socket, 0x8, payload);
+      socket.end();
+      partialFrames.delete(socket);
+      return messages;
+    }
+    if (opcode === 9) {
+      sendWsControl(socket, 0xA, payload);
+      continue;
+    }
+    if (opcode === 10) continue;
+    if (opcode !== 1) continue;
     messages.push(payload.toString("utf8"));
   }
   if (offset < buffer.length) partialFrames.set(socket, buffer.subarray(offset));
@@ -172,12 +190,18 @@ function decodeWs(socket, chunk) {
 }
 
 function rememberPartial(socket, buffer, frameStart, messages) {
-  partialFrames.set(socket, buffer.subarray(frameStart));
+  const partial = buffer.subarray(frameStart);
+  if (partial.length > MAX_WS_PARTIAL_BYTES) {
+    partialFrames.delete(socket);
+    socket.destroy();
+  } else {
+    partialFrames.set(socket, partial);
+  }
   return messages;
 }
 
 function sendWs(socket, value) {
-  if (socket.destroyed) return;
+  if (socket.destroyed || !socket.writable) return false;
   const payload = Buffer.from(JSON.stringify(value));
   let header;
   if (payload.length < 126) {
@@ -193,5 +217,28 @@ function sendWs(socket, value) {
     header[1] = 127;
     header.writeBigUInt64BE(BigInt(payload.length), 2);
   }
-  socket.write(Buffer.concat([header, payload]));
+  try {
+    socket.write(Buffer.concat([header, payload]));
+    return true;
+  } catch {
+    socket.destroy();
+    return false;
+  }
+}
+
+function sendWsControl(socket, opcode, payload = Buffer.alloc(0)) {
+  if (socket.destroyed || !socket.writable) return false;
+  const safePayload = Buffer.from(payload.subarray(0, 125));
+  try {
+    socket.write(Buffer.concat([Buffer.from([0x80 | opcode, safePayload.length]), safePayload]));
+    return true;
+  } catch {
+    socket.destroy();
+    return false;
+  }
+}
+
+function removeSocket(set, socket) {
+  set.delete(socket);
+  partialFrames.delete(socket);
 }

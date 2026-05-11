@@ -55,6 +55,9 @@ const ui = {
 };
 
 let frameWs: WebSocket | null = null;
+let reconnectTimer: number | null = null;
+let reconnectDelay = 500;
+let lastStreamError = "";
 let lastAudioPost = 0;
 
 loadAudioTuning();
@@ -172,28 +175,66 @@ function frame(now: number) {
 function sendAudioPayload() {
   const payload = audioPayload(captureAudio);
   payload.source = "capture-window";
-  if (frameWs?.readyState === WebSocket.OPEN) {
+  if (frameWs?.readyState === WebSocket.OPEN && frameWs.bufferedAmount < 64 * 1024) {
     try {
       frameWs.send(JSON.stringify(payload));
+      clearStreamError();
       return;
     } catch {
-      // Fall through to HTTP fallback.
+      frameWs.close();
+      showStreamError("Audio WebSocket send failed. Reconnecting...");
+      return;
     }
   }
-  fetch("/api/emulator/audio", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-  }).catch(() => {});
+  if (frameWs?.readyState === WebSocket.OPEN) {
+    showStreamError("Audio WebSocket is backed up. Waiting for it to drain...");
+  } else {
+    showStreamError("Audio WebSocket disconnected. Reconnecting...");
+  }
 }
 
 function connectFrameStream() {
+  if (frameWs?.readyState === WebSocket.OPEN || frameWs?.readyState === WebSocket.CONNECTING) return;
   const protocol = location.protocol === "https:" ? "wss:" : "ws:";
   frameWs = new WebSocket(`${protocol}//${location.host}/api/emulator/frames`);
+  frameWs.onopen = () => {
+    reconnectDelay = 500;
+    clearStreamError();
+    if (captureAudio.source) ui.status.textContent = `${sourceLabel()} audio streaming to the WLED emulator.`;
+  };
+  frameWs.onerror = () => {
+    frameWs?.close();
+  };
   frameWs.onclose = () => {
     frameWs = null;
-    setTimeout(connectFrameStream, 1000);
+    scheduleReconnect();
   };
+}
+
+function showStreamError(message: string) {
+  if (lastStreamError === message) return;
+  lastStreamError = message;
+  ui.status.textContent = message;
+}
+
+function clearStreamError() {
+  if (lastStreamError && captureAudio.source) ui.status.textContent = `${sourceLabel()} audio streaming to the WLED emulator.`;
+  lastStreamError = "";
+}
+
+function scheduleReconnect() {
+  if (reconnectTimer !== null) return;
+  reconnectTimer = window.setTimeout(() => {
+    reconnectTimer = null;
+    connectFrameStream();
+    reconnectDelay = Math.min(5000, Math.round(reconnectDelay * 1.6));
+  }, reconnectDelay);
+}
+
+function sourceLabel() {
+  if (captureAudio.inputKind === "direct") return "Computer";
+  if (captureAudio.inputKind === "mic") return "Microphone";
+  return "Audio";
 }
 
 function updateReadouts() {

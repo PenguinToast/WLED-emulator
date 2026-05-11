@@ -61,7 +61,7 @@ The host `CRGBPalette16` shim stores the same 16 RGB entries as FastLED's palett
 
 `SEGPALETTE` resolves through the current native segment, so upstream effects that call `ColorFromPalette(SEGPALETTE, ...)` see the same selected host palette as effects that call `SEGMENT.color_from_palette(...)`.
 
-The runner renders frames at a fast cadence from cached emulator state. WLED state still refreshes by HTTP because it is comparatively large and low-rate; audio arrives over the `/api/emulator/frames` typed WebSocket bus as `audio` messages, with `GET /api/emulator/audio` only used when the WebSocket is unavailable.
+The runner renders frames at a fast cadence from cached emulator state. WLED state still refreshes by HTTP because it is comparatively large and low-rate; audio arrives over the `/api/emulator/frames` typed WebSocket bus as `audio` messages. If the audio WebSocket is unavailable, the runner keeps the last fresh audio until it expires and logs a warning instead of polling `GET /api/emulator/audio`.
 
 Frames include a runner stream ID and a monotonically increasing frame number. The runner streams typed `frame` messages over `/api/emulator/frames` when possible and falls back to HTTP POSTs; the server ignores stale frames within the same stream so delayed older data cannot overwrite newer LED data, while still accepting fresh frames after runner restarts.
 

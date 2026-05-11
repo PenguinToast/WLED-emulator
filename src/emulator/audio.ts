@@ -89,6 +89,7 @@ export function updateAudio() {
 }
 
 let lastAudioPost = 0;
+let lastAudioStreamError = "";
 export function postAudio(now) {
   if (!audio.analyser || !audio.source) return;
   if (now === lastAudioPost) return;
@@ -98,19 +99,35 @@ export function postAudio(now) {
 
 function sendAudioPayload() {
   const payload = audioPayload(audio);
-  if (model.frameWs?.readyState === WebSocket.OPEN) {
+  if (model.frameWs?.readyState === WebSocket.OPEN && model.frameWs.bufferedAmount < 64 * 1024) {
     try {
       model.frameWs.send(JSON.stringify(payload));
+      clearAudioStreamError();
       return;
     } catch {
-      // Fall through to HTTP fallback.
+      model.frameWs.close();
+      setAudioStreamError("Audio WebSocket send failed. Reconnecting...");
+      return;
     }
   }
-  fetch("/api/emulator/audio", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-  }).catch(() => {});
+  if (model.frameWs?.readyState === WebSocket.OPEN) {
+    setAudioStreamError("Audio WebSocket is backed up. Waiting for it to drain...");
+  } else {
+    setAudioStreamError("Audio WebSocket disconnected. Reconnecting...");
+  }
+}
+
+function setAudioStreamError(message) {
+  if (lastAudioStreamError === message) return;
+  lastAudioStreamError = message;
+  model.audioStreamError = message;
+  ui.status.textContent = message;
+}
+
+function clearAudioStreamError() {
+  if (!lastAudioStreamError) return;
+  lastAudioStreamError = "";
+  model.audioStreamError = "";
 }
 
 async function ensureAudioContext() {

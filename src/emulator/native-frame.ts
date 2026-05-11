@@ -20,7 +20,7 @@ export function applyNativeFrame() {
 
   if (hasRgbFrame) applyRgbFrame(frame.rgb);
   else applyLedArrayFrame(frame.leds);
-  ui.status.textContent = `Native renderer active: ${frame.source || "cpp_harness"}.`;
+  ui.status.textContent = model.audioStreamError || `Native renderer active: ${frame.source || "cpp_harness"}.`;
 }
 
 function applyRgbFrame(rgb) {

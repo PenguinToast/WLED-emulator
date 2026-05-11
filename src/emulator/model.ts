@@ -10,6 +10,7 @@ export const model = {
   leds: [],
   ws: null,
   frameWs: null,
+  audioStreamError: "",
   frame: 0,
 };
 

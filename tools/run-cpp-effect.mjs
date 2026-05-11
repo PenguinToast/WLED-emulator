@@ -48,10 +48,9 @@ let cachedState = await fetch(`${server}/api/emulator/state`).then((res) => res.
 let cachedAudio = cachedState.audio || {};
 let lastStateFetch = 0;
 let stateFetchPending = false;
-let lastAudioFetch = 0;
-let audioFetchPending = false;
 let frameSocket = null;
 let lastFrameSocketAttempt = 0;
+let lastAudioSocketWarning = 0;
 
 function frameWebSocketUrl() {
   return `${server.replace(/^http/, "ws")}/api/emulator/frames`;
@@ -64,11 +63,10 @@ function ensureFrameSocket(now) {
   lastFrameSocketAttempt = now;
   frameSocket = new WebSocket(frameWebSocketUrl());
   frameSocket.addEventListener("message", handleFrameSocketMessage);
-  frameSocket.addEventListener("close", () => {
-    frameSocket = null;
-  });
+  frameSocket.addEventListener("close", clearFrameSocket);
   frameSocket.addEventListener("error", () => {
-    frameSocket = null;
+    frameSocket?.close();
+    clearFrameSocket();
   });
 }
 
@@ -79,6 +77,10 @@ function handleFrameSocketMessage(event) {
   } catch {
     // Ignore malformed bus messages.
   }
+}
+
+function clearFrameSocket() {
+  frameSocket = null;
 }
 
 function refreshState(now) {
@@ -98,25 +100,18 @@ function refreshState(now) {
 
 function refreshAudio(now) {
   if (frameSocket?.readyState === WebSocket.OPEN) return;
-  if (audioFetchPending || now - lastAudioFetch < 33) return;
-  lastAudioFetch = now;
-  audioFetchPending = true;
-  fetch(`${server}/api/emulator/audio`)
-    .then((res) => res.json())
-    .then((audio) => {
-      cachedAudio = audio;
-    })
-    .catch((error) => console.error(error.message))
-    .finally(() => {
-      audioFetchPending = false;
-    });
+  if (frameSocket?.readyState === WebSocket.CONNECTING) return;
+  if (now - lastAudioSocketWarning > 2000) {
+    lastAudioSocketWarning = now;
+    console.error("Audio WebSocket disconnected; native effects will use stale audio until it reconnects.");
+  }
 }
 
 function tick() {
   const now = Date.now();
   refreshState(now);
-  refreshAudio(now);
   ensureFrameSocket(now);
+  refreshAudio(now);
   const state = cachedState;
   const segments = state.state.seg?.length ? state.state.seg : [];
   const audio = isFreshAudio(cachedAudio, now) ? cachedAudio : {};
@@ -172,17 +167,27 @@ function tick() {
   }
   if (latestPayload) {
     const payload = JSON.stringify({ type: "frame", source: "cpp_harness", streamId, frame, rgb: latestPayload.rgb, leds: latestPayload.leds });
-    if (frameSocket?.readyState === WebSocket.OPEN) {
-      frameSocket.send(payload);
+    if (frameSocket?.readyState === WebSocket.OPEN && frameSocket.bufferedAmount < 64 * 1024) {
+      try {
+        frameSocket.send(payload);
+      } catch (error) {
+        console.error(error.message);
+        frameSocket.close();
+        postFrame(payload);
+      }
     } else {
-      fetch(`${server}/api/emulator/frame`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: payload,
-      }).catch((error) => console.error(error.message));
+      postFrame(payload);
     }
   }
   frame += 1;
+}
+
+function postFrame(payload) {
+  fetch(`${server}/api/emulator/frame`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: payload,
+  }).catch((error) => console.error(error.message));
 }
 
 function isFreshAudio(audio, now) {

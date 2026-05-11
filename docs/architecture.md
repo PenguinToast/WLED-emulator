@@ -38,7 +38,7 @@ This project runs the real WLED browser UI and mobile-app protocol against a loc
 - `src/emulator/app.ts`: app startup and animation loop.
 - `src/emulator/model.ts`: shared mutable browser model.
 - `src/emulator/dom.ts`: typed DOM element lookup.
-- `src/emulator/transport.ts`: server fetch/poll/WebSocket integration, including the typed native-frame WebSocket bus and HTTP fallback polling.
+- `src/emulator/transport.ts`: server fetch/poll/WebSocket integration, including the typed native-frame/audio WebSocket bus and native-frame HTTP fallback polling.
 - `src/emulator/audio-core.ts`: shared Web Audio analysis, WLED mic FFT bin generation, PC-style direct-audio sync bin generation, and source-specific beat detection.
 - `src/emulator/audio.ts`: main emulator audio controls for local mic/file playback plus opening the persistent capture window for computer/share audio.
 - `src/emulator/audio-capture.ts`: detached mic/computer capture window that streams audio to the emulator frame bus and survives main `/emulator` reloads.
@@ -63,7 +63,7 @@ The browser renderer is intentionally not an effect engine. It displays frames s
 
 Native frame transport uses compact flat RGB hex strings end to end. The C++ process emits that format, the runner forwards typed `frame` messages over the emulator bus, the server broadcasts them without expanding, and `src/emulator/native-frame.ts` decodes them into the browser LED model just before painting.
 
-Audio transport uses the same emulator bus. Browser audio sources send typed `audio` messages over `/api/emulator/frames`; the C++ runner consumes those messages directly and only falls back to the HTTP audio endpoint when the bus is unavailable. The main emulator also consumes inbound `audio` bus messages for its readouts and FFT visualizer whenever it is not analyzing a local mic/file source. Computer/share capture runs in `/emulator/audio-capture.html` so its `MediaStream` belongs to a separate window and can keep streaming while the main emulator page reloads.
+Audio transport uses the same emulator bus. Browser audio sources send typed `audio` messages over `/api/emulator/frames`; the C++ runner consumes those messages directly and logs a warning if the bus is unavailable instead of polling the HTTP audio endpoint. The main emulator also consumes inbound `audio` bus messages for its readouts and FFT visualizer whenever it is not analyzing a local mic/file source. Computer/share capture runs in `/emulator/audio-capture.html` so its `MediaStream` belongs to a separate window and can keep streaming while the main emulator page reloads.
 
 Native RGB frames already include WLED's final output brightness from the C++ harness. The harness keeps global brightness out of the effect feedback loop and applies it only when serializing the frame, matching WLED's output/show boundary more closely. The browser renderer draws those native frame values without applying WLED brightness a second time, but it does apply a canvas-only perceptual display curve so low-amplitude upstream effects remain visible on screen.
 
