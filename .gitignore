@@ -19,3 +19,4 @@ dist/
 !/artifacts/audio/
 /artifacts/audio/*
 !/artifacts/audio/.gitkeep
+!/artifacts/audio/samples.json

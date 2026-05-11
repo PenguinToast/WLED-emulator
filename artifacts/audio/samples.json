@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "notes": [
+    "Audio files in this folder are local test artifacts and are intentionally gitignored.",
+    "ccMixter media URLs return Forbidden unless requests include browser-like headers, especially User-Agent and Referer.",
+    "ccMixter currently presents a legacy TLS chain in this environment; the downloader disables TLS verification only for these artifact fetches.",
+    "truth.bpm is source-declared BPM metadata. Beat phase is still estimated by tools/evaluate-edc-audio.mjs."
+  ],
+  "rejectUnauthorized": false,
+  "defaultRequestHeaders": {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36",
+    "Accept": "audio/mpeg,audio/*;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9"
+  },
+  "samples": [
+    {
+      "id": "ccmixter-q6-nadeya-deep-house-128",
+      "file": "ccmixter-q6-nadeya-deep-house-128.mp3",
+      "title": "Nadeya Deep House Remix",
+      "artist": "Q6",
+      "genre": "deep house",
+      "truth": { "bpm": 128, "source": "ccMixter upload metadata" },
+      "duration": "3:59",
+      "license": "Creative Commons Attribution Noncommercial 3.0",
+      "sourcePage": "https://ccmixter.org/files/Q6/45394",
+      "downloadUrl": "https://ccmixter.org/content/Q6/Q6_-_Nadeya_Deep_House_Remix.mp3",
+      "requestHeaders": {
+        "Referer": "https://ccmixter.org/files/Q6/45394"
+      },
+      "sha256": "21e3249297b4afd35250183de6405f48810cf64e7f57c58901987fa40fc919d9"
+    },
+    {
+      "id": "ccmixter-myfreemickey-techno-kit-130",
+      "file": "ccmixter-myfreemickey-techno-kit-130.mp3",
+      "title": "techno kit",
+      "artist": "My Free Mickey",
+      "genre": "techno / house loop kit",
+      "truth": { "bpm": 130, "source": "ccMixter upload metadata" },
+      "duration": "1:51",
+      "license": "Creative Commons Attribution 3.0",
+      "sourcePage": "https://ccmixter.org/files/myfreemickey/42762",
+      "downloadUrl": "https://ccmixter.org/content/myfreemickey/myfreemickey_-_techno_kit.mp3",
+      "requestHeaders": {
+        "Referer": "https://ccmixter.org/files/myfreemickey/42762"
+      },
+      "sha256": "32450b8f02eef21e2878dd93214e2cf022d309e045560953332fea0bcd82a37a"
+    },
+    {
+      "id": "ccmixter-party-redlight-trance-edm-project-03-138",
+      "file": "ccmixter-party-redlight-trance-edm-project-03-138.mp3",
+      "title": "Trance&EDM project 03",
+      "artist": "P7R7L5 (DJ Yegor)",
+      "genre": "trance / EDM",
+      "truth": { "bpm": 138, "source": "ccMixter upload metadata" },
+      "duration": "2:19",
+      "license": "Creative Commons Attribution Noncommercial 3.0",
+      "sourcePage": "https://ccmixter.org/files/party_redlight/51382",
+      "downloadUrl": "https://ccmixter.org/content/party_redlight/party_redlight_-_Trance_EDM_project_03.mp3",
+      "requestHeaders": {
+        "Referer": "https://ccmixter.org/files/party_redlight/51382"
+      },
+      "sha256": "5e34ed08d47278d6bba765ea9e5c2d393cc7fc4e528e10b9ae92e1cbf811f6b3"
+    },
+    {
+      "id": "ccmixter-starfrosch-ophelias-dubstep-140",
+      "file": "ccmixter-starfrosch-ophelias-dubstep-140.mp3",
+      "title": "Ophelia's Dubstep",
+      "artist": "starfrosch",
+      "genre": "dubstep",
+      "truth": { "bpm": 140, "source": "ccMixter upload metadata" },
+      "duration": "3:19",
+      "license": "Creative Commons Attribution Noncommercial 3.0",
+      "sourcePage": "https://ccmixter.org/files/starfrosch/36936",
+      "downloadUrl": "https://ccmixter.org/content/starfrosch/starfrosch_-_Ophelia_s_Dubstep.mp3",
+      "requestHeaders": {
+        "Referer": "https://ccmixter.org/files/starfrosch/36936"
+      },
+      "sha256": "112cfd3d754159c731375e8573a56a246785aed4834ce62d2ab5dcb596521b75"
+    },
+    {
+      "id": "ccmixter-myfreemickey-dubstep-b-minor-148",
+      "file": "ccmixter-myfreemickey-dubstep-b-minor-148.mp3",
+      "title": "Dubstep B minor",
+      "artist": "My Free Mickey",
+      "genre": "short dubstep loop",
+      "truth": { "bpm": 148, "source": "ccMixter upload metadata" },
+      "duration": "0:44",
+      "license": "Creative Commons Attribution 3.0",
+      "sourcePage": "https://ccmixter.org/files/myfreemickey/40149",
+      "downloadUrl": "https://ccmixter.org/content/myfreemickey/myfreemickey_-_Dubstep_B_minor.mp3",
+      "requestHeaders": {
+        "Referer": "https://ccmixter.org/files/myfreemickey/40149"
+      },
+      "sha256": "4ba2ae4010f41888e85f295979ff59431af1d045eb6d97103d2a18e93a7d0d93"
+    }
+  ]
+}

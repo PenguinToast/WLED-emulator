@@ -98,18 +98,22 @@ node tools/evaluate-edc-audio.mjs --beat-focus 160 --impact 190 artifacts/audio/
 node tools/evaluate-edc-audio.mjs --truth-bpm 128 artifacts/audio/known-128bpm-house-loop.ogg
 ```
 
-The tool decodes audio with `ffmpeg`, builds 16 normalized PC-sync-style analyzer bins, feeds the native C++ harness, and reports analyzer peaks, tempo-grid ground truth, visual pulse count, beat/pulse matches, median lag, and tail duty. It estimates ground truth by deriving an onset envelope, choosing a likely tempo by autocorrelation, and aligning a beat grid to the strongest onset phase; `--truth-bpm` can override the tempo when a sample has known BPM metadata. This is stricter for house/techno than the older transient-thinning check because it scores against the musical beat grid instead of every low-frequency bump. The `truthConfidence`/`truthReliable` fields should be checked before trusting recall and precision for breakbeat or dubstep samples that may not have a steady beat grid. Downloaded test tracks should be kept in `artifacts/audio/`, whose contents are gitignored.
+The tool decodes audio with `ffmpeg`, builds 16 normalized PC-sync-style analyzer bins, feeds the native C++ harness, and reports analyzer peaks, tempo-grid ground truth, visual pulse count, beat/pulse matches, median lag, and tail duty. It estimates ground truth by deriving an onset envelope, choosing a likely tempo by autocorrelation, and aligning a beat grid to the strongest onset phase; `--truth-bpm` can override the tempo when a sample has known BPM metadata. This is stricter for house/techno than the older transient-thinning check because it scores against the musical beat grid instead of every low-frequency bump. The `truthConfidence`/`truthReliable` fields should be checked before trusting recall and precision for breakbeat or dubstep samples that may not have a steady beat grid.
 
-Recent detector tuning used the cached Nihilore tracks plus three temporary Wikimedia Commons samples so house and dubstep are represented:
+Downloaded test tracks should be kept in `artifacts/audio/`, whose media contents are gitignored. The tracked manifest at `artifacts/audio/samples.json` records source URLs, licenses, source-declared BPM truth, expected hashes, and the request headers needed to fetch ccMixter media:
 
-- `Bigroom house drop loop 30 sec.ogg`: 30s house/four-on-floor loop, Wikimedia Commons.
-- `Dubstep Loop by WinnieTheMoog.ogg`: 29s dubstep loop, Wikimedia Commons.
-- `Dubstep drop example.ogg`: 30s dubstep drop, Wikimedia Commons.
+```sh
+npm run audio:download
+npm run audio:download -- --force
+node tools/download-audio-artifacts.mjs --force
+```
 
-With the ESP32-S3-friendly onset tracker and current live-control defaults, the 30s house reference estimates a 128.6 BPM grid with high confidence and the visual pulses match 59 of 65 beats after the dense-drop rescue pass. Across the broader mixed test set, low tail duty remains the main safety check; low-confidence tempo grids on dubstep references are useful for smoke testing response, but not as authoritative beat labels.
+ccMixter's `content/...` media endpoints return a small `Forbidden` body unless downloads include browser-like headers. The downloader sends `User-Agent`, `Accept`, `Accept-Language`, and the per-track `Referer` from the manifest.
 
-Additional known-BPM checks are kept locally under `artifacts/audio/`:
+Known-BPM samples currently cached locally:
 
-- `ccmixter-q6-nadeya-deep-house-128.mp3`: Q6, "Nadeya Deep House Remix", BPM 128. The 60s window at offset 45s produced 129 visual hits, 95 matches, 0ms median lag, and 0 tail duty. The phase confidence is low, so treat this as a musical smoke test rather than strict ground truth.
-- `ccmixter-myfreemickey-techno-kit-130.mp3`: My Free Mickey, "techno kit", BPM 130. The 60s window at offset 20s produced 110 visual hits, 96 matches, 0ms median lag, and 0 tail duty.
-- `ccmixter-party-redlight-trance-edm-project-03-138.mp3`: P7R7L5, "Trance&EDM project 03", BPM 138. The 60s window at offset 20s produced a reliable 138.5 BPM grid, 131 visual hits, 110 matches, 0ms median lag, and 0 tail duty.
+- `ccmixter-q6-nadeya-deep-house-128.mp3`: Q6, "Nadeya Deep House Remix", BPM 128.
+- `ccmixter-myfreemickey-techno-kit-130.mp3`: My Free Mickey, "techno kit", BPM 130.
+- `ccmixter-party-redlight-trance-edm-project-03-138.mp3`: P7R7L5, "Trance&EDM project 03", BPM 138.
+- `ccmixter-starfrosch-ophelias-dubstep-140.mp3`: starfrosch, "Ophelia's Dubstep", BPM 140.
+- `ccmixter-myfreemickey-dubstep-b-minor-148.mp3`: My Free Mickey, "Dubstep B minor", BPM 148.
