@@ -22,6 +22,7 @@ type AudioState = {
   magnitude: number;
   pcAgcSpan: number;
   pcAgcInitialized: boolean;
+  pcNoiseFloor: Float32Array;
   lastBass: number;
   lastVolume: number;
   tuning: {
@@ -45,6 +46,9 @@ const PC_SYNC_BEAT_LOW_HZ = 100;
 const PC_SYNC_BEAT_HIGH_HZ = 500;
 const PC_SYNC_BEAT_HISTORY = 50;
 const PC_SYNC_BEAT_THRESHOLD = 1.16;
+const PC_SYNC_MAX_BLEND = 0.38;
+const PC_SYNC_FLOOR_BIAS = 0.86;
+const PC_SYNC_OUTPUT_GAIN = 0.9;
 const WLED_PINK = [
   1.7, 1.71, 1.73, 1.78,
   1.68, 1.56, 1.55, 1.63,
@@ -210,29 +214,42 @@ function updatePcSyncFftBins(audio: AudioState, hzPerBin: number, nyquist: numbe
     const fromHz = freqPoints[index];
     const toHz = freqPoints[index + 1];
     const band = maxFrequencyInRange(audio, fromHz, toHz, hzPerBin);
-    const scaled = noiseGateOpen ? Math.sqrt(clamp(band.value * audio.tuning.inputGain * audio.tuning.fftGain, 0, 1)) : 0;
-    bucketMax = Math.max(bucketMax, scaled);
-    bucketSum += scaled;
-    if (scaled > peakMagnitude) {
-      peakMagnitude = scaled;
+    const raw = noiseGateOpen
+      ? (band.average * (1 - PC_SYNC_MAX_BLEND) + band.value * PC_SYNC_MAX_BLEND) * audio.tuning.inputGain * audio.tuning.fftGain
+      : 0;
+    const floor = updatePcSyncNoiseFloor(audio, index, raw);
+    const lifted = Math.max(0, raw - floor * PC_SYNC_FLOOR_BIAS);
+    bucketMax = Math.max(bucketMax, lifted);
+    bucketSum += lifted;
+    if (raw > peakMagnitude) {
+      peakMagnitude = raw;
       peakFrequency = band.frequency;
     }
-    audio.fftAvg[index] = scaled;
+    audio.fftAvg[index] = lifted;
   }
 
   updatePcSyncAgc(audio, bucketMax);
   const span = Math.max(audio.pcAgcSpan || 0, 0.0001);
   for (let index = 0; index < audio.bins.length; index += 1) {
-    const normalized = clamp(audio.fftAvg[index] / span, 0, 1);
+    const normalized = clamp(Math.pow(clamp(audio.fftAvg[index] / span, 0, 1), 0.78) * PC_SYNC_OUTPUT_GAIN, 0, 1);
     const attack = normalized > audio.bins[index] ? 0.75 : 0.08 + (1 - audio.tuning.smoothing) * 0.22;
     audio.bins[index] = mix(audio.bins[index], normalized, attack);
   }
 
   audio.majorPeak = peakMagnitude > 0.02 ? clamp(peakFrequency, 1, maxHz) : 0;
-  audio.magnitude = clamp(peakMagnitude / span, 0, 1);
+  audio.magnitude = clamp(bucketMax / span, 0, 1);
   const averageBucket = bucketSum / Math.max(1, audio.bins.length);
   const rawVolume = bucketMax > 0 ? averageBucket / bucketMax : 0;
   audio.volume = clamp(Math.max(audio.volume, rawVolume), 0, 1);
+}
+
+function updatePcSyncNoiseFloor(audio: AudioState, index: number, raw: number) {
+  const floors = audio.pcNoiseFloor;
+  const current = floors[index] || raw * 0.48;
+  const rate = raw < current ? 0.06 : 0.0035;
+  const next = raw > 0 ? mix(current, raw, rate) : mix(current, 0, 0.08);
+  floors[index] = next;
+  return next;
 }
 
 function updatePcSyncAgc(audio: AudioState, bucketMax: number) {
@@ -297,15 +314,17 @@ function maxFrequencyInRange(audio: AudioState, fromHz: number, toHz: number, hz
   const from = Math.max(0, Math.floor(fromHz / hzPerBin));
   const to = Math.min(audio.freqData.length - 1, Math.ceil(toHz / hzPerBin));
   let value = 0;
+  let sum = 0;
   let frequency = fromHz;
   for (let index = from; index <= to; index += 1) {
     const sample = audio.freqData[index] / 255;
+    sum += sample;
     if (sample > value) {
       value = sample;
       frequency = (index + 0.5) * hzPerBin;
     }
   }
-  return { value, frequency };
+  return { value, average: sum / Math.max(1, to - from + 1), frequency };
 }
 
 function averageWledBinRange(audio: AudioState, fromBin: number, toBin: number, hzPerBin: number) {

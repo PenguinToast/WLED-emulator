@@ -32,6 +32,7 @@ const captureAudio = {
   magnitude: 0,
   pcAgcSpan: 0,
   pcAgcInitialized: false,
+  pcNoiseFloor: new Float32Array(16),
   lastBass: 0,
   lastVolume: 0,
   tuning: {
@@ -278,4 +279,5 @@ function resetAudioAnalysis() {
   captureAudio.beatHistory.length = 0;
   captureAudio.pcAgcSpan = 0;
   captureAudio.pcAgcInitialized = false;
+  captureAudio.pcNoiseFloor.fill(0);
 }

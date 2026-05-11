@@ -203,6 +203,7 @@ function resetAudioAnalysis() {
   audio.beatHistory.length = 0;
   audio.pcAgcSpan = 0;
   audio.pcAgcInitialized = false;
+  audio.pcNoiseFloor.fill(0);
 }
 
 function broadcastAudioControl(message) {
