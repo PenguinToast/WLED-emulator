@@ -2,8 +2,8 @@ import { clamp, paletteFor } from "./color.js";
 import { canvas, ctx, spectrumCanvas, spectrumCtx, ui } from "./dom.js";
 import { activeSegment, audio, display, model } from "./model.js";
 
-const DISPLAY_GAIN = 1.8;
 const DISPLAY_GAMMA = 0.72;
+const DISPLAY_EXPOSURE = 1.6;
 const BEAT_FLASH_MS = 220;
 
 let lastBeatAt = 0;
@@ -172,7 +172,9 @@ function paintLed(x: number, y: number, radius: number, color?: number[]) {
 
 function displayChannel(value: number) {
   if (!value) return 0;
-  return clamp(Math.pow(clamp(value) / 255, DISPLAY_GAMMA) * 255 * DISPLAY_GAIN);
+  const lifted = Math.pow(clamp(value) / 255, DISPLAY_GAMMA) * DISPLAY_EXPOSURE;
+  const mapped = (1 - Math.exp(-lifted)) / (1 - Math.exp(-DISPLAY_EXPOSURE));
+  return clamp(mapped * 255);
 }
 
 function paintDiffuserVeil(width: number, height: number, maxRadius: number) {

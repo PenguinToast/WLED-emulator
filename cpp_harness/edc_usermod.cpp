@@ -182,11 +182,17 @@ static uint32_t edcSlotColor(uint8_t slot, uint8_t paletteIndex, uint8_t brightn
 
 static uint8_t edcPulseEnvelope(uint8_t type, uint32_t age, uint16_t life) {
   if (age >= life) return 0;
-  if (type == 0 && age < 38) return 255;
+  if (type == 0 && age < 24) return 255;
   const uint8_t decay = 255 - (age * 255U) / life;
   if (type == 0) return edcScale8Video(decay, decay);
   if (type == 1) return edcScale8Video(decay, uint8_t(160 + decay / 3));
   return edcScale8Video(decay, decay);
+}
+
+static uint8_t edcPulseEnvelopeFloor(uint8_t type) {
+  if (type == 0) return 14;
+  if (type == 1) return 9;
+  return 8;
 }
 
 static void edcSpawnPulse(EdcPulseState* state, uint8_t type, uint8_t strength, uint8_t colorIndex) {
@@ -247,6 +253,7 @@ static void edcRenderSegmentPulse(const EdcPulse& pulse, uint32_t age, uint16_t 
   const uint8_t envelope = edcPulseEnvelope(pulse.type, delayedAge, life);
   const uint8_t falloff = edcPulseOutwardFalloff(pulse);
   const uint8_t segmentEnvelope = envelope > falloff ? uint8_t(envelope - falloff) : 0;
+  if (segmentEnvelope < edcPulseEnvelopeFloor(pulse.type)) return;
   const uint8_t brightness = edcScale8Video(pulse.strength, segmentEnvelope);
   if (brightness < 5) return;
 
@@ -271,6 +278,7 @@ static void edcRenderStripPulse(const EdcPulse& pulse, uint32_t age, uint16_t le
   const uint16_t radius = std::min<uint16_t>(half + edcPulseWidth(pulse.type, len), (age * (half + edcPulseWidth(pulse.type, len))) / life);
   const uint8_t width = edcPulseWidth(pulse.type, len);
   const uint8_t envelope = edcPulseEnvelope(pulse.type, age, life);
+  if (envelope < edcPulseEnvelopeFloor(pulse.type)) return;
   const uint8_t slot = std::min<uint8_t>(2, pulse.type);
 
   for (uint16_t i = 0; i < len; i += 1) {
