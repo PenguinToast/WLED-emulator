@@ -44,18 +44,20 @@ Select `EDC Custom` in the real WLED UI, run `npm run cpp:run`, and the browser 
 
 The current EDC effect is a beat-based pulse renderer for the daisy-chained ring fixture:
 
-- Bass/kick hits create the dominant warm pulse, radiating from the center ring outward.
+- Bass/kick transients create the dominant pulse, radiating from the center ring outward with a short decay so normal EDM kicks read as tight hits.
+- Sustained bass energy creates a lower-level rumble glow instead of repeatedly retriggering the full kick pulse.
 - Snare-like mid-band transients create shorter accent-color pulses.
-- Hi-hat/high-band transients add quick cool-white/accent sparkles.
+- Hi-hat/high-band transients add brief sparse sparkle accents only on detected high-band hits, not continuously while music is playing.
 - On the EDC multi-segment ring fixture, each ring segment is delayed by its ring position so the pulse travels outward. On a single segment, the same code falls back to a center-out strip pulse.
+- Colors come from normal WLED color slots: primary drives kick/bass, secondary drives snare accents, and tertiary drives high sparkle/rumble accents. Selecting a palette adds subtle color progression across beats and rings.
 
 The custom mode exposes WLED sliders as:
 
-- `Speed`: propagation and trail speed
+- `Speed`: propagation speed
 - `Sensitivity`: audio hit strength
-- `Kick hue`: main bass-pulse hue
-- `Accent hue`: snare/hat accent hue
-- `Sparkle`: high-frequency sparkle density
+- `Tightness`: kick pulse decay, higher values are shorter and more beat-locked
+- `Rumble`: sustained bass glow amount
+- `Sparkle`: high-frequency transient sparkle density
 
 ## Carrying Code To Real WLED
 
