@@ -42,4 +42,4 @@ Segment color updates are slot-aware. The WLED UI sends partial color arrays suc
 
 ## Version Info
 
-The WLED UI probes `/edit?edit=/version-info.json` on load. The emulator serves a current version-info document by default so the first-install reporting modal does not appear every time the UI opens. If the UI uploads a new `version-info.json` through `/upload`, the emulator stores that choice in memory for the running process.
+The WLED UI probes `/edit?edit=/version-info.json` on load. The emulator serves a current version-info document by default so the first-install reporting modal does not appear every time the UI opens. If the UI uploads a new `version-info.json` through `/upload`, the emulator stores that choice in `.edc-emulator/version-info.json`, which is ignored by git and survives dev-server restarts.

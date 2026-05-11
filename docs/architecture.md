@@ -18,7 +18,7 @@ This project runs the real WLED browser UI and mobile-app protocol against a loc
 
 ## Server Modules
 
-- `src/server/config.ts`: filesystem paths, port, and emulator version.
+- `src/server/config.ts`: filesystem paths, local emulator state paths, port, and emulator version.
 - `src/server/audio-state.ts`: normalization and typed bus payloads for emulator audio state.
 - `src/server/context.ts`: process-local emulator state container.
 - `src/server/vite-plugin.ts`: Vite development integration for WLED-compatible routes, WebSocket upgrades, HTML transforms, and frontend HMR.
@@ -31,7 +31,7 @@ This project runs the real WLED browser UI and mobile-app protocol against a loc
 - `src/server/palettes.ts`: emulator palette names and RGB lookup data.
 - `src/server/responses.ts`: JSON/text/static file response helpers.
 - `src/server/presets.ts`: small preset payload served at `/presets.json`.
-- `src/server/version-info.ts`: minimal WLED UI version-info file emulation for the install/upgrade prompt.
+- `src/server/version-info.ts`: minimal WLED UI version-info file emulation and local persistence for the install/upgrade prompt.
 
 ## Browser Modules
 

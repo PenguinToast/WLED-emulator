@@ -1,8 +1,21 @@
-import { emulatorVersion } from "./config.js";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+
+import { emulatorVersion, localStateDir, versionInfoPath } from "./config.js";
 
 const VERSION_INFO_PATH = "/version-info.json";
 
 export function createInitialVersionInfo() {
+  if (existsSync(versionInfoPath)) {
+    try {
+      return normalizeVersionInfo(JSON.parse(readFileSync(versionInfoPath, "utf8")));
+    } catch {
+      return defaultVersionInfo();
+    }
+  }
+  return defaultVersionInfo();
+}
+
+function defaultVersionInfo() {
   return {
     version: emulatorVersion,
     neverAsk: false,
@@ -24,6 +37,7 @@ export async function applyUpload(req, ctx) {
   if (!jsonText) return false;
   const next = JSON.parse(jsonText);
   ctx.versionInfo = normalizeVersionInfo(next);
+  persistVersionInfo(ctx.versionInfo);
   return true;
 }
 
@@ -33,6 +47,11 @@ function normalizeVersionInfo(value) {
     neverAsk: Boolean(value?.neverAsk),
     alwaysReport: Boolean(value?.alwaysReport),
   };
+}
+
+function persistVersionInfo(versionInfo) {
+  mkdirSync(localStateDir, { recursive: true });
+  writeFileSync(versionInfoPath, `${JSON.stringify(versionInfo, null, 2)}\n`);
 }
 
 function extractJsonPayload(body) {

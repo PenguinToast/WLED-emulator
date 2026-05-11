@@ -57,5 +57,6 @@ function isEmulatorRequest(pathname: string): boolean {
     || pathname.startsWith("/json")
     || pathname.startsWith("/api/emulator/")
     || pathname.startsWith("/emulator")
+    || pathname === "/edit"
     || pathname === "/upload";
 }
