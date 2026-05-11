@@ -6,7 +6,7 @@ import { clampInt, clone } from "./util.js";
 
 export const EDC_USERMOD_NAME = "EDC Dance";
 export const EDC_USERMOD_EFFECT_ID = 187;
-export const EDC_USERMOD_EFFECT_DATA = "EDC Custom@Speed,Beat Focus,Tightness,Bass Adapt,Accent Gate;!,!,!;!;1vf;sx=192,ix=150,c1=190,c2=178,c3=12,pal=4,m12=2,si=0";
+export const EDC_USERMOD_EFFECT_DATA = "EDC Custom@Speed,Beat Focus,Tightness,Impact,Accent Mix;!,!,!;!;1vf;sx=192,ix=150,c1=190,c2=190,c3=18,pal=4,m12=2,si=0";
 
 export const edcUsermodEffectRegistration = {
   requestedId: 255,
@@ -125,7 +125,7 @@ export function edcUsermodSettingsHtml(config) {
   <main>
     <p><a href="/">Back to WLED</a> · <a href="/emulator/">Emulator</a></p>
     <h1>Usermod Settings</h1>
-    <p class="hint">EDC Dance registers the EDC Custom effect through the usermod effect API. These settings mirror the static cfg.json knobs; live feel should still come from adaptive audio analysis and segment controls.</p>
+    <p class="hint">EDC Dance registers the EDC Custom effect through the usermod effect API. These settings mirror the static cfg.json knobs; live feel should come from adaptive audio analysis and the EDC Custom effect sliders.</p>
     <h2>${EDC_USERMOD_NAME}</h2>
     <form id="settings">
       <label><span>Preset</span><select name="preset">
@@ -135,12 +135,12 @@ export function edcUsermodSettingsHtml(config) {
         <option value="trance">Trance</option>
       </select></label>
       <label class="row"><span>Enabled</span><input type="checkbox" name="enabled"></label>
-      <label class="row"><span>Adaptive tuning</span><input type="checkbox" name="autoAdapt"></label>
+      <label class="row"><span>Adaptive detector</span><input type="checkbox" name="autoAdapt"></label>
       ${range("segmentDelayMs", "Segment propagation ms", 1, 120)}
       ${range("outwardFade", "Outer ring attenuation", 0, 32)}
-      ${range("rumbleAmount", "Sustained bass floor", 0, 128)}
-      ${range("accentAmount", "Mid/high accent weight", 16, 255)}
-      ${range("primaryMinGapMs", "Primary beat minimum gap ms", 60, 300)}
+      ${range("rumbleAmount", "Sustained bass glow", 0, 128)}
+      ${range("accentAmount", "Accent output scale", 16, 255)}
+      ${range("primaryMinGapMs", "Beat retrigger floor ms", 60, 300)}
       <button type="submit">Save</button>
       <p class="status" id="status"></p>
     </form>

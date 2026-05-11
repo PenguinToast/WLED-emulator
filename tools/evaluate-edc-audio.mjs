@@ -20,7 +20,7 @@ const defaultOffset = 15;
 
 const args = parseArgs(process.argv.slice(2));
 if (!args.files.length) {
-  console.error("Usage: node tools/evaluate-edc-audio.mjs [--seconds 75] [--offset 15] <track.mp3> [...]");
+  console.error("Usage: node tools/evaluate-edc-audio.mjs [--seconds 75] [--offset 15] [--impact 190] <track.mp3> [...]");
   process.exit(1);
 }
 
@@ -45,8 +45,8 @@ function parseArgs(values) {
     speed: 192,
     beatFocus: 150,
     tightness: 190,
-    bassAdapt: 178,
-    accentGate: 12,
+    impact: 190,
+    accentMix: 18,
     files: [],
   };
   for (let index = 0; index < values.length; index += 1) {
@@ -56,8 +56,8 @@ function parseArgs(values) {
     else if (value === "--speed") result.speed = Number(values[++index] || result.speed);
     else if (value === "--beat-focus") result.beatFocus = Number(values[++index] || result.beatFocus);
     else if (value === "--tightness") result.tightness = Number(values[++index] || result.tightness);
-    else if (value === "--bass-adapt") result.bassAdapt = Number(values[++index] || result.bassAdapt);
-    else if (value === "--accent-gate") result.accentGate = Number(values[++index] || result.accentGate);
+    else if (value === "--impact") result.impact = Number(values[++index] || result.impact);
+    else if (value === "--accent-mix") result.accentMix = Number(values[++index] || result.accentMix);
     else result.files.push(value);
   }
   return result;
@@ -255,8 +255,8 @@ function inputLine(frame, index) {
       args.speed,
       args.beatFocus,
       args.tightness,
-      args.bassAdapt,
-      args.accentGate,
+      args.impact,
+      args.accentMix,
       0,
       0,
       0,

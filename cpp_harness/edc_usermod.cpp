@@ -1,8 +1,10 @@
 #include "edc_usermod.hpp"
 #include "generated/upstream_fx_1d.hpp"
 
-const char _data_FX_MODE_EDC_CUSTOM[] PROGMEM = "EDC Custom@Speed,Beat Focus,Tightness,Bass Adapt,Accent Gate;!,!,!;!;1vf;sx=192,ix=150,c1=190,c2=178,c3=12,pal=4,m12=2,si=0";
+const char _data_FX_MODE_EDC_CUSTOM[] PROGMEM = "EDC Custom@Speed,Beat Focus,Tightness,Impact,Accent Mix;!,!,!;!;1vf;sx=192,ix=150,c1=190,c2=190,c3=18,pal=4,m12=2,si=0";
 EdcDanceUsermod edcDanceUsermod;
+
+static constexpr uint8_t EDC_AUTO_ADAPT_LEVEL = 178;
 
 struct EdcPulse {
   uint32_t born;
@@ -87,10 +89,17 @@ static uint8_t edcEnergyFloor(uint8_t average, uint8_t peak, uint8_t base, uint8
   return uint8_t(std::min<uint16_t>(240, uint16_t(average) + base + edcScale8Video(range, weight)));
 }
 
-static uint8_t edcHitStrength(uint8_t energy, uint8_t flux, uint8_t floor, uint8_t minimum) {
+static uint8_t edcHitStrength(uint8_t energy, uint8_t flux, uint8_t floor, uint8_t minimum, uint8_t impact) {
   const uint8_t above = energy > floor ? uint8_t(energy - floor) : 0;
   const uint16_t punch = std::min<uint16_t>(255, uint16_t(above) * 3U + uint16_t(flux) * 5U + energy / 4U);
-  return uint8_t(minimum + ((255U - minimum) * punch) / 255U);
+  const uint8_t base = uint8_t(minimum + ((255U - minimum) * punch) / 255U);
+  if (impact >= 190) return uint8_t(base + ((255U - base) * uint16_t(impact - 190)) / 65U);
+  const uint8_t scale = uint8_t(82 + (uint16_t(impact) * 173U) / 190U);
+  return edcScale8Video(base, scale);
+}
+
+static uint8_t edcAccentLevel(uint8_t value, uint8_t accentMix) {
+  return edcDanceUsermod.accentLevel(edcScale8Video(value, uint8_t(56 + accentMix * 6U)));
 }
 
 static uint32_t edcAbsDiff32(uint32_t a, uint32_t b) {
@@ -183,9 +192,11 @@ static uint8_t edcPulseOutwardFalloff(const EdcPulse& pulse) {
   const uint16_t staticFade = edcDanceUsermod.outwardFadeFor(pulse.type);
   const uint8_t progress = edcDanceUsermod.segmentProgress255();
   const uint8_t weak = 255 - pulse.strength;
+  const uint8_t impact = SEGMENT.custom2;
+  const uint8_t impactFade = uint8_t((255 - impact) / (pulse.type == 0 ? 4 : 6));
   const uint8_t strengthFade = pulse.type == 0
-    ? edcScale8Video(progress, uint8_t(34 + weak / 2))
-    : edcScale8Video(progress, uint8_t(22 + weak / 3));
+    ? edcScale8Video(progress, uint8_t(18 + impactFade + weak / 2))
+    : edcScale8Video(progress, uint8_t(14 + impactFade + weak / 3));
   return uint8_t(std::min<uint16_t>(224, staticFade + strengthFade));
 }
 
@@ -258,8 +269,10 @@ uint16_t mode_edc_custom(void) {
   const uint8_t snareEnergy = std::max<uint8_t>(mid, edcScale8Video(edcBlend8(edcMaxBin(5, 8), edcMaxBin(8, 11), 96), 224));
   const uint8_t hatEnergy = high;
   const uint8_t beatFocus = SEGMENT.intensity;
-  const uint8_t bassAdapt = edcDanceUsermod.config.autoAdapt ? SEGMENT.custom2 : 96;
-  const uint8_t accentGate = SEGMENT.custom3;
+  const uint8_t impact = SEGMENT.custom2;
+  const uint8_t accentMix = SEGMENT.custom3;
+  const uint8_t adaptLevel = edcDanceUsermod.config.autoAdapt ? EDC_AUTO_ADAPT_LEVEL : 96;
+  const uint8_t accentSelectivity = 31 - std::min<uint8_t>(31, accentMix);
 
   if (SEGENV.call == 0) {
     state->avgLow = low;
@@ -281,19 +294,19 @@ uint16_t mode_edc_custom(void) {
     state->tempoConfidence = 0;
   }
 
-  state->peakLow = edcDecayPeak(state->peakLow, low, 2 + (255 - bassAdapt) / 96);
-  state->peakKickEnergy = edcDecayPeak(state->peakKickEnergy, kickEnergy, 2 + (255 - bassAdapt) / 96);
+  state->peakLow = edcDecayPeak(state->peakLow, low, 2 + (255 - adaptLevel) / 96);
+  state->peakKickEnergy = edcDecayPeak(state->peakKickEnergy, kickEnergy, 2 + (255 - adaptLevel) / 96);
   const uint8_t lowRange = state->peakLow > state->avgLow ? uint8_t(state->peakLow - state->avgLow) : 0;
 
   const uint8_t kickFlux = edcPositiveDelta(kickEnergy, state->smoothKickEnergy);
   const uint8_t snareFlux = edcPositiveDelta(snareEnergy, state->smoothSnareEnergy);
   const uint8_t hatFlux = edcPositiveDelta(hatEnergy, state->smoothHatEnergy);
-  state->peakKickFlux = edcDecayPeak(state->peakKickFlux, kickFlux, 1 + (255 - bassAdapt) / 128);
+  state->peakKickFlux = edcDecayPeak(state->peakKickFlux, kickFlux, 1 + (255 - adaptLevel) / 128);
   state->peakSnareFlux = edcDecayPeak(state->peakSnareFlux, snareFlux, 2);
   state->peakHatFlux = edcDecayPeak(state->peakHatFlux, hatFlux, 3);
 
-  const uint8_t kickFluxFloor = edcAdaptiveFluxFloor(state->avgKickFlux, state->peakKickFlux, uint8_t(7 + beatFocus / 40), bassAdapt, beatFocus);
-  const uint8_t kickEnergyFloor = edcEnergyFloor(state->avgKickEnergy, state->peakKickEnergy, uint8_t(5 + beatFocus / 64), bassAdapt, beatFocus);
+  const uint8_t kickFluxFloor = edcAdaptiveFluxFloor(state->avgKickFlux, state->peakKickFlux, uint8_t(7 + beatFocus / 40), adaptLevel, beatFocus);
+  const uint8_t kickEnergyFloor = edcEnergyFloor(state->avgKickEnergy, state->peakKickEnergy, uint8_t(5 + beatFocus / 64), adaptLevel, beatFocus);
   const uint16_t learnedCooldown = std::min<uint16_t>(214, std::max<uint16_t>(104, (uint32_t(state->kickInterval) * 42U) / 100U));
   const uint16_t minPrimaryGap = std::max<uint16_t>(150, edcDanceUsermod.config.primaryMinGapMs);
   const uint16_t kickCooldown = std::max<uint16_t>(minPrimaryGap, learnedCooldown);
@@ -304,12 +317,12 @@ uint16_t mode_edc_custom(void) {
   const bool hintedKickFlux = (samplePeak || nearTempo)
     && uint16_t(kickFlux) * 4U >= uint16_t(kickFluxFloor) * 3U
     && kickEnergy > uint16_t(state->avgKickEnergy) + 5U;
-  const bool kickDominant = uint16_t(kickEnergy) * (214 - beatFocus / 5 + bassAdapt / 10) > uint16_t(mid) * 128
-    && uint16_t(kickEnergy) * (198 - beatFocus / 6 + bassAdapt / 12) > uint16_t(high) * 128;
+  const bool kickDominant = uint16_t(kickEnergy) * (214 - beatFocus / 5 + adaptLevel / 10) > uint16_t(mid) * 128
+    && uint16_t(kickEnergy) * (198 - beatFocus / 6 + adaptLevel / 12) > uint16_t(high) * 128;
   const bool kick = (strongKickFlux || hintedKickFlux) && kickDominant && sinceKick > kickCooldown;
 
-  const uint8_t snareFluxFloor = edcAdaptiveFluxFloor(state->avgSnareFlux, state->peakSnareFlux, uint8_t(8 + accentGate / 18 + beatFocus / 64), bassAdapt / 2, beatFocus / 2);
-  const uint8_t hatFluxFloor = edcAdaptiveFluxFloor(state->avgHatFlux, state->peakHatFlux, uint8_t(7 + accentGate / 16 + beatFocus / 72), bassAdapt / 3, beatFocus / 3);
+  const uint8_t snareFluxFloor = edcAdaptiveFluxFloor(state->avgSnareFlux, state->peakSnareFlux, uint8_t(8 + accentSelectivity / 18 + beatFocus / 64), adaptLevel / 2, beatFocus / 2);
+  const uint8_t hatFluxFloor = edcAdaptiveFluxFloor(state->avgHatFlux, state->peakHatFlux, uint8_t(7 + accentSelectivity / 16 + beatFocus / 72), adaptLevel / 3, beatFocus / 3);
   const bool snare = snareFlux >= snareFluxFloor
     && snareEnergy > uint16_t(state->avgMid) + 7U
     && snareEnergy > uint16_t(low) * 5U / 8U
@@ -323,17 +336,17 @@ uint16_t mode_edc_custom(void) {
   if (kick) {
     edcTrackKickTempo(state, strip.now);
     state->beatStep += 1;
-    edcSpawnPulse(state, 0, edcHitStrength(kickEnergy, kickFlux, kickEnergyFloor, 104), uint8_t(state->beatStep * 29));
+    edcSpawnPulse(state, 0, edcHitStrength(kickEnergy, kickFlux, kickEnergyFloor, 104, impact), uint8_t(state->beatStep * 29));
   } else if (state->lastKick != 0 && sinceKick > uint32_t(state->kickInterval) * 2U && state->tempoConfidence > 0) {
     state->tempoConfidence -= 1;
   }
   if (snare && !kick) {
     state->lastSnare = strip.now;
-    edcSpawnPulse(state, 1, edcDanceUsermod.accentLevel(edcHitStrength(snareEnergy, snareFlux, state->avgMid, 82)), uint8_t(96 + state->beatStep * 17));
+    edcSpawnPulse(state, 1, edcAccentLevel(edcHitStrength(snareEnergy, snareFlux, state->avgMid, 82, impact), accentMix), uint8_t(96 + state->beatStep * 17));
   }
   if (hat) {
     state->lastHat = strip.now;
-    edcSpawnPulse(state, 2, edcDanceUsermod.accentLevel(edcHitStrength(hatEnergy, hatFlux, state->avgHigh, 56)), uint8_t(180 + state->beatStep * 13));
+    edcSpawnPulse(state, 2, edcAccentLevel(edcHitStrength(hatEnergy, hatFlux, state->avgHigh, 56, impact), accentMix), uint8_t(180 + state->beatStep * 13));
   }
 
   state->smoothKickEnergy = edcIir(state->smoothKickEnergy, kickEnergy, kickEnergy > state->smoothKickEnergy ? 2 : 3);
