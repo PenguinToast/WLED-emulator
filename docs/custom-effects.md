@@ -46,7 +46,7 @@ Select `EDC Custom` in the real WLED UI, run `npm run cpp:run`, and the browser 
 
 The current EDC effect is a beat-based pulse renderer for the daisy-chained ring fixture:
 
-- Bass/kick transients create the dominant pulse, radiating from the center ring outward with a short decay so normal EDM kicks read as tight hits.
+- Bass/kick transients create the dominant pulse, radiating from the center ring outward with a short decay so normal EDM kicks read as tight hits. Hit strength controls both brightness and outward reach: smaller kicks stay weighted toward the inner rings, while stronger hits push farther outward with less attenuation.
 - `Beat Focus` biases detection toward the dominant low-end rhythm instead of acting as a second audio gain control. Higher values require the kick to stand out more clearly from mid/high content and make snare/hat accents more selective.
 - The kick detector uses a firmware-portable onset tracker rather than raw bass loudness: blended sub/punch energy is compared against a short smoothed baseline to produce positive flux, flux floors follow the current track's average and peak behavior, and accepted kicks train a small tempo/phase model. `samplePeak` can hint at a borderline onset, but it does not trigger a pulse by itself.
 - The detector is intentionally ESP32-S3 friendly: byte-sized band state, integer IIR filters, no heap allocation beyond normal WLED `SEGENV` effect data, and no local FFT/ML work inside the effect. It consumes the same `fftResult[16]`, `volumeSmth`, and `samplePeak` values that WLED-SR audio-reactive effects already receive.
@@ -80,7 +80,7 @@ Current static knobs are deliberately installation/audio-behavior oriented rathe
 - `preset`: optional starting points for broad EDM families; adaptive analysis should remain the main behavior during a set.
 - `autoAdapt`: enables the effect's dynamic bass/accent thresholds.
 - `segmentDelayMs`: base outward propagation delay per active segment.
-- `outwardFade`: attenuation applied as pulses move through later segments.
+- `outwardFade`: baseline attenuation applied as pulses move through later segments. The effect adds more attenuation for weaker pulses so loud hits travel farther than smaller accents.
 - `rumbleAmount`: sustained-bass floor used for long low-end energy.
 - `accentAmount`: relative weight for snare and hi-hat style pulses.
 - `primaryMinGapMs`: minimum spacing for the dominant beat pulse.

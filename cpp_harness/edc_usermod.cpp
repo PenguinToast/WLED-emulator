@@ -89,7 +89,8 @@ static uint8_t edcEnergyFloor(uint8_t average, uint8_t peak, uint8_t base, uint8
 
 static uint8_t edcHitStrength(uint8_t energy, uint8_t flux, uint8_t floor, uint8_t minimum) {
   const uint8_t above = energy > floor ? uint8_t(energy - floor) : 0;
-  return uint8_t(std::max<uint16_t>(minimum, std::min<uint16_t>(255, uint16_t(energy) + above + flux * 2U)));
+  const uint16_t punch = std::min<uint16_t>(255, uint16_t(above) * 3U + uint16_t(flux) * 5U + energy / 4U);
+  return uint8_t(minimum + ((255U - minimum) * punch) / 255U);
 }
 
 static uint32_t edcAbsDiff32(uint32_t a, uint32_t b) {
@@ -178,6 +179,16 @@ static uint8_t edcPulseWidth(uint8_t type, uint16_t len) {
   return std::max<uint8_t>(base, 1 + len / (type == 0 ? 16 : (type == 1 ? 28 : 48)));
 }
 
+static uint8_t edcPulseOutwardFalloff(const EdcPulse& pulse) {
+  const uint16_t staticFade = edcDanceUsermod.outwardFadeFor(pulse.type);
+  const uint8_t progress = edcDanceUsermod.segmentProgress255();
+  const uint8_t weak = 255 - pulse.strength;
+  const uint8_t strengthFade = pulse.type == 0
+    ? edcScale8Video(progress, uint8_t(34 + weak / 2))
+    : edcScale8Video(progress, uint8_t(22 + weak / 3));
+  return uint8_t(std::min<uint16_t>(224, staticFade + strengthFade));
+}
+
 static void edcRenderSegmentPulse(const EdcPulse& pulse, uint32_t age, uint16_t len) {
   const uint8_t segment = edcDanceUsermod.segmentIndex();
   const uint16_t delay = edcDanceUsermod.propagationDelayMs();
@@ -189,7 +200,7 @@ static void edcRenderSegmentPulse(const EdcPulse& pulse, uint32_t age, uint16_t 
   if (delayedAge > life) return;
 
   const uint8_t envelope = edcPulseEnvelope(pulse.type, delayedAge, life);
-  const uint8_t falloff = edcDanceUsermod.outwardFadeFor(pulse.type);
+  const uint8_t falloff = edcPulseOutwardFalloff(pulse);
   const uint8_t segmentEnvelope = envelope > falloff ? uint8_t(envelope - falloff) : 0;
   const uint8_t brightness = edcScale8Video(pulse.strength, segmentEnvelope);
   if (brightness < 5) return;
@@ -312,7 +323,7 @@ uint16_t mode_edc_custom(void) {
   if (kick) {
     edcTrackKickTempo(state, strip.now);
     state->beatStep += 1;
-    edcSpawnPulse(state, 0, edcHitStrength(kickEnergy, kickFlux, kickEnergyFloor, 148), uint8_t(state->beatStep * 29));
+    edcSpawnPulse(state, 0, edcHitStrength(kickEnergy, kickFlux, kickEnergyFloor, 104), uint8_t(state->beatStep * 29));
   } else if (state->lastKick != 0 && sinceKick > uint32_t(state->kickInterval) * 2U && state->tempoConfidence > 0) {
     state->tempoConfidence -= 1;
   }
