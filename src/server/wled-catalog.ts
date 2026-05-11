@@ -33,7 +33,7 @@ export function loadOfficialWledEffects() {
     fxdata[index] = data;
   }
   effects[HOST_CUSTOM_EFFECT_ID] = "EDC Custom";
-  fxdata[HOST_CUSTOM_EFFECT_ID] = "!,Width;!,!;!;01f";
+  fxdata[HOST_CUSTOM_EFFECT_ID] = "Speed,Sensitivity,Kick hue,Accent hue,Sparkle;!,!,!;!;1vf;sx=172,ix=190,c1=24,c2=150,c3=12,m12=2,si=0";
   return { effects, fxdata };
 }
 

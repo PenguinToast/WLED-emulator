@@ -42,6 +42,21 @@ The server appends one host custom mode after the official WLED `v0.15.4` catalo
 
 Select `EDC Custom` in the real WLED UI, run `npm run cpp:run`, and the browser emulator will display frames rendered by `mode_edc_custom()` in `cpp_harness/custom_effect.cpp`.
 
+The current EDC effect is a beat-based pulse renderer for the daisy-chained ring fixture:
+
+- Bass/kick hits create the dominant warm pulse, radiating from the center ring outward.
+- Snare-like mid-band transients create shorter accent-color pulses.
+- Hi-hat/high-band transients add quick cool-white/accent sparkles.
+- On the EDC multi-segment ring fixture, each ring segment is delayed by its ring position so the pulse travels outward. On a single segment, the same code falls back to a center-out strip pulse.
+
+The custom mode exposes WLED sliders as:
+
+- `Speed`: propagation and trail speed
+- `Sensitivity`: audio hit strength
+- `Kick hue`: main bass-pulse hue
+- `Accent hue`: snare/hat accent hue
+- `Sparkle`: high-frequency sparkle density
+
 ## Carrying Code To Real WLED
 
 For real firmware, copy the `mode_edc_custom()` function body into WLED's effect source or a custom effect/usermod integration and register it with WLED's normal `addEffect(...)` path. The host-only file wrapper, includes, and fallback modes are not meant to be copied.
