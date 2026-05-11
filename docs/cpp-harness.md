@@ -68,6 +68,8 @@ The runner renders frames at a fast cadence from cached emulator state. WLED sta
 
 Frames include a runner stream ID and a monotonically increasing frame number. The runner streams typed `frame` messages over `/api/emulator/frames` when possible and falls back to HTTP POSTs; the server ignores stale frames within the same stream so delayed older data cannot overwrite newer LED data, while still accepting fresh frames after runner restarts.
 
+If multiple native streamers are accidentally left running, the frame bus prefers the newest stream ID for a source and ignores older still-running streams while the newer stream is fresh. This prevents independent C++ processes with different segment runtime state from interleaving frames and making smooth effects appear to flicker or jump.
+
 Audio messages also carry `updatedAt`; the runner treats audio as silent when it has not seen a fresh update recently, so a closed browser source or one-off test payload cannot keep driving audio-reactive effects indefinitely.
 
 The native process emits compact flat RGB hex lines to stdout. The runner preserves that compact RGB representation over the browser WebSocket instead of expanding every frame into nested arrays; the emulator UI decodes the flat RGB frame immediately before painting.

@@ -57,7 +57,11 @@ export function broadcast(ctx, value) {
 export function updateExternalFrame(ctx, value, excludeSocket = null) {
   const frame = Number(value?.frame ?? -1);
   const streamId = String(value?.streamId || value?.source || "external");
+  const source = String(value?.source || "external");
   const sameStream = streamId === (ctx.externalFrame.streamId || ctx.externalFrame.source);
+  if (!sameStream && isOlderFrameStream(source, streamId, ctx.externalFrame)) {
+    return false;
+  }
   if (sameStream && Number.isFinite(frame) && frame >= 0 && frame < (ctx.externalFrame.frame ?? -1)) {
     return false;
   }
@@ -66,7 +70,7 @@ export function updateExternalFrame(ctx, value, excludeSocket = null) {
     leds: Array.isArray(value?.leds) ? value.leds : [],
     rgb,
     updatedAt: Date.now(),
-    source: String(value?.source || "external"),
+    source,
     frame: Number.isFinite(frame) ? frame : (ctx.externalFrame.frame ?? 0) + 1,
     streamId,
   };
@@ -97,6 +101,18 @@ export function externalFrameLedCount(frame) {
 
 function normalizeFrameHex(value) {
   return value.replace(/[^a-fA-F0-9]/g, "").toLowerCase();
+}
+
+function isOlderFrameStream(source, streamId, currentFrame) {
+  if (!currentFrame?.updatedAt || source !== currentFrame.source || Date.now() - currentFrame.updatedAt > 2000) return false;
+  const incomingStartedAt = frameStreamStartedAt(streamId);
+  const currentStartedAt = frameStreamStartedAt(currentFrame.streamId || currentFrame.source);
+  return Number.isFinite(incomingStartedAt) && Number.isFinite(currentStartedAt) && incomingStartedAt < currentStartedAt;
+}
+
+function frameStreamStartedAt(streamId) {
+  const match = /:(\d+)$/.exec(String(streamId || ""));
+  return match ? Number(match[1]) : NaN;
 }
 
 function handleWsData(socket, buffer, ctx) {
