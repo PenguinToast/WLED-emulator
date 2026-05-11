@@ -45,9 +45,10 @@ Select `EDC Custom` in the real WLED UI, run `npm run cpp:run`, and the browser 
 The current EDC effect is a beat-based pulse renderer for the daisy-chained ring fixture:
 
 - Bass/kick transients create the dominant pulse, radiating from the center ring outward with a short decay so normal EDM kicks read as tight hits.
-- Sustained bass energy creates a lower-level rumble glow instead of repeatedly retriggering the full kick pulse.
+- The kick detector tracks the current song's low-band baseline, low-band peak, and recent kick spacing so the main pulse adapts across different EDM mixes instead of relying on one fixed bass threshold.
+- Sustained bass energy creates a lower-level automatic rumble glow instead of repeatedly retriggering the full kick pulse.
 - Snare-like mid-band transients create shorter accent-color pulses.
-- Hi-hat/high-band transients add brief sparse sparkle accents only on detected high-band hits, not continuously while music is playing.
+- Hi-hat/high-band transients add brief sparse accent pulses only on detected high-band hits, not continuously while music is playing.
 - On the EDC multi-segment ring fixture, each ring segment is delayed by its ring position so the pulse travels outward. On a single segment, the same code falls back to a center-out strip pulse.
 - Colors come from normal WLED color slots: primary drives kick/bass, secondary drives snare accents, and tertiary drives high sparkle/rumble accents. Selecting a palette adds subtle color progression across beats and rings.
 
@@ -56,8 +57,8 @@ The custom mode exposes WLED sliders as:
 - `Speed`: propagation speed
 - `Sensitivity`: audio hit strength
 - `Tightness`: kick pulse decay, higher values are shorter and more beat-locked
-- `Rumble`: sustained bass glow amount
-- `Sparkle`: high-frequency transient sparkle density
+- `Bass Adapt`: how strongly kick detection follows the current track's low-end baseline, peak, and learned kick spacing
+- `Accent Gate`: how selective snare and hi-hat transient detection should be; higher values require cleaner mid/high hits
 
 ## Carrying Code To Real WLED
 
