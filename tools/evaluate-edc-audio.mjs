@@ -13,7 +13,7 @@ const pcSyncHighHz = 10000;
 const beatLowHz = 100;
 const beatHighHz = 500;
 const beatHistoryLength = 50;
-const beatThreshold = 1.2;
+const beatThreshold = 1.16;
 const truthMinBpm = 78;
 const truthMaxBpm = 190;
 const ringStops = [1, 9, 21, 37, 61, 93, 133];
@@ -119,6 +119,7 @@ function analyzeFrames(samples) {
   let lastBeatAt = -Infinity;
   let bpm = 0;
   let previousBeatEnergy = 0;
+  let beatBaseline = 0;
 
   for (let start = 0; start + windowSize <= samples.length; start += frameStep) {
     const timeMs = (start / sampleRate) * 1000;
@@ -151,9 +152,24 @@ function analyzeFrames(samples) {
     previousBeatEnergy = mix(previousBeatEnergy, currentBeat, currentBeat > previousBeatEnergy ? 0.38 : 0.08);
     const ready = beatHistory.length >= beatHistoryLength;
     const averageBeat = beatHistory.reduce((sum, value) => sum + value, 0) / Math.max(1, beatHistory.length);
-    const beat = ready && currentBeat > averageBeat * beatThreshold && currentBeat > 0.08 && timeMs - lastBeatAt > 120;
+    const lowerBeat = percentile(beatHistory, 0.25);
+    const upperBeat = percentile(beatHistory, 0.9);
+    const localSpan = Math.max(0.02, upperBeat - lowerBeat);
+    const baseline = beatBaseline || currentBeat;
+    const detectorOnset = currentBeat - baseline;
+    const sinceBeat = timeMs - lastBeatAt;
+    const expectedMs = bpm > 60 && bpm < 190 ? 60000 / bpm : 0;
+    const minBeatGap = expectedMs > 0 ? Math.max(180, expectedMs * 0.45) : 220;
+    const nearTempo = expectedMs > 0 && sinceBeat > 120 && Math.abs(sinceBeat - expectedMs) < Math.max(70, expectedMs * 0.18);
+    const transientBeat = currentBeat > Math.max(0.08, averageBeat * beatThreshold, lowerBeat + localSpan * 0.62)
+      && detectorOnset > Math.max(0.012, localSpan * 0.16);
+    const tempoBeat = nearTempo
+      && currentBeat > Math.max(0.07, lowerBeat + localSpan * 0.38)
+      && (detectorOnset > Math.max(0.006, localSpan * 0.07) || currentBeat > averageBeat * 1.04);
+    const beat = ready && (transientBeat || tempoBeat) && sinceBeat > minBeatGap;
     beatHistory.push(currentBeat);
     if (beatHistory.length > beatHistoryLength) beatHistory.shift();
+    beatBaseline = mix(beatBaseline || currentBeat, currentBeat, currentBeat > baseline ? 0.18 : 0.045);
     if (beat) {
       if (Number.isFinite(lastBeatAt)) {
         const instantBpm = 60000 / (timeMs - lastBeatAt);
@@ -496,6 +512,13 @@ function median(values) {
 
 function average(values) {
   return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+}
+
+function percentile(values, amount) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const index = Math.min(sorted.length - 1, Math.max(0, Math.floor(amount * (sorted.length - 1))));
+  return sorted[index];
 }
 
 function mix(from, to, amount) {

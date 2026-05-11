@@ -44,7 +44,7 @@ const PC_SYNC_HIGH_HZ = 10000;
 const PC_SYNC_BEAT_LOW_HZ = 100;
 const PC_SYNC_BEAT_HIGH_HZ = 500;
 const PC_SYNC_BEAT_HISTORY = 50;
-const PC_SYNC_BEAT_THRESHOLD = 1.2;
+const PC_SYNC_BEAT_THRESHOLD = 1.16;
 const WLED_PINK = [
   1.7, 1.71, 1.73, 1.78,
   1.68, 1.56, 1.55, 1.63,
@@ -255,9 +255,24 @@ function updatePcSyncBeatDetection(audio: AudioState) {
   const history = audio.beatHistory;
   const ready = history.length >= PC_SYNC_BEAT_HISTORY;
   const average = history.reduce((sum, value) => sum + value, 0) / Math.max(1, history.length);
-  audio.beat = ready && current > average * PC_SYNC_BEAT_THRESHOLD && current > 0.08 && now - audio.lastBeatAt > 120;
+  const lower = percentile(history, 0.25);
+  const upper = percentile(history, 0.9);
+  const localSpan = Math.max(0.02, upper - lower);
+  const baseline = audio.beatEnergy || current;
+  const onset = current - baseline;
+  const sinceBeat = now - audio.lastBeatAt;
+  const expectedMs = audio.bpm > 60 && audio.bpm < 190 ? 60000 / audio.bpm : 0;
+  const minBeatGap = expectedMs > 0 ? Math.max(180, expectedMs * 0.45) : 220;
+  const nearTempo = expectedMs > 0 && sinceBeat > 120 && Math.abs(sinceBeat - expectedMs) < Math.max(70, expectedMs * 0.18);
+  const transientBeat = current > Math.max(0.08, average * PC_SYNC_BEAT_THRESHOLD, lower + localSpan * 0.62)
+    && onset > Math.max(0.012, localSpan * 0.16);
+  const tempoBeat = nearTempo
+    && current > Math.max(0.07, lower + localSpan * 0.38)
+    && (onset > Math.max(0.006, localSpan * 0.07) || current > average * 1.04);
+  audio.beat = ready && (transientBeat || tempoBeat) && sinceBeat > minBeatGap;
   history.push(current);
   if (history.length > PC_SYNC_BEAT_HISTORY) history.shift();
+  audio.beatEnergy = mix(audio.beatEnergy || current, current, current > baseline ? 0.18 : 0.045);
   if (audio.beat) {
     if (audio.lastBeatAt > 0) {
       const instantBpm = 60000 / (now - audio.lastBeatAt);
@@ -265,6 +280,13 @@ function updatePcSyncBeatDetection(audio: AudioState) {
     }
     audio.lastBeatAt = now;
   }
+}
+
+function percentile(values: number[], amount: number) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const index = Math.min(sorted.length - 1, Math.max(0, Math.floor(amount * (sorted.length - 1))));
+  return sorted[index];
 }
 
 function logFrequencyPoints(minHz: number, maxHz: number, count: number) {

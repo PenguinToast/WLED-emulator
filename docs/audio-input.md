@@ -61,7 +61,7 @@ The emulator preserves that fixed-band shape for microphone input, where the goa
 
 Direct digital audio instead models a PC audio-sync sender. The emulator uses 16 logarithmic buckets from 40 Hz to 10 kHz, stores the maximum magnitude in each bucket, square-root scales the values, normalizes them with a rolling automatic gain span, and smooths display/output release with the local `Smoothing` slider. This gives mastered browser/system output the same kind of WLED UDP-sync payload shape as the reference SR-WLED Windows server. See `docs/audio-reference-implementations.md` for the comparison against other public senders.
 
-Bass transients also drive the payload `beat` flag used as WLED's `samplePeak` shim. Effects such as `Ripple Peak` depend on that flag to spawn new ripples. Mic input keeps the low-frequency-peak plus transient detector. Direct digital audio follows the SR-WLED server approach: compare the current 100-500 Hz max against a rolling history and trigger when it crosses the dynamic threshold with a short refractory interval.
+Bass transients also drive the payload `beat` flag used as WLED's `samplePeak` shim. Effects such as `Ripple Peak` depend on that flag to spawn new ripples. Mic input keeps the low-frequency-peak plus transient detector. Direct digital audio follows the SR-WLED server approach: compare the current 100-500 Hz max against a rolling history and trigger when it crosses a robust local threshold. The direct detector also keeps a light tempo lock and tempo-aware refractory window so mastered drops with a high noise floor can keep emitting one beat per musical kick instead of going silent or firing several times per beat.
 
 ## Browser Capture Notes
 
