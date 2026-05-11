@@ -66,3 +66,14 @@ The custom mode exposes WLED sliders as:
 For real firmware, copy the `mode_edc_custom()` function body into WLED's effect source or a custom effect/usermod integration and register it with WLED's normal `addEffect(...)` path. The host-only file wrapper, includes, and fallback modes are not meant to be copied.
 
 Keep effects inside the compatibility surface above if you want local behavior to remain close to real WLED behavior. 2D matrix helpers and the full upstream FastLED/noise API are not shimmed yet.
+
+## Track Evaluation
+
+Use `tools/evaluate-edc-audio.mjs` for repeatable offline checks against real tracks:
+
+```sh
+node tools/evaluate-edc-audio.mjs --seconds 75 --offset 15 /path/to/track.mp3
+node tools/evaluate-edc-audio.mjs --beat-focus 160 --bass-adapt 190 /path/to/track.mp3
+```
+
+The tool decodes audio with `ffmpeg`, builds 16 normalized PC-sync-style analyzer bins, feeds the native C++ harness, and reports raw analyzer beat flags, thinned primary beat candidates, visual pulse count, beat/pulse matches, median lag, and tail duty. It is meant for comparative tuning of `EDC Custom`; downloaded test tracks should stay outside the repo. Current defaults use `Beat Focus = 150`, which tested as a better cross-track balance than the stricter earlier value of `190`.
