@@ -14,6 +14,10 @@ export const model = {
   frame: 0,
 };
 
+export const display = {
+  diffuser: false,
+};
+
 export const audio = {
   context: null,
   analyser: null,

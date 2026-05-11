@@ -21,6 +21,7 @@ export const ui = {
   computerAudio: element<HTMLButtonElement>("computerAudioButton"),
   file: element<HTMLInputElement>("fileInput"),
   stop: element<HTMLButtonElement>("stopButton"),
+  diffuser: element<HTMLButtonElement>("diffuserButton"),
   player: element<HTMLAudioElement>("audioPlayer"),
   power: element<HTMLElement>("powerReadout"),
   brightness: element<HTMLElement>("brightnessReadout"),

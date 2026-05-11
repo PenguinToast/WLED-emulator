@@ -38,6 +38,17 @@ a:hover,
   border-color: var(--accent);
 }
 
+.toggleButton {
+  min-width: 84px;
+}
+
+.toggleButton[aria-pressed="true"],
+.toggleButton.active {
+  border-color: rgba(102, 210, 164, 0.9);
+  background: rgba(102, 210, 164, 0.2);
+  box-shadow: 0 0 0 1px rgba(102, 210, 164, 0.18) inset;
+}
+
 input[type="file"] { display: none; }
 
 .shell {
