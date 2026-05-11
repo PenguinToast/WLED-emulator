@@ -4,7 +4,6 @@ import { existsSync } from "node:fs";
 import { builtEmulatorDir, builtEmulatorHtmlDir, emulatorDir, wledDir } from "./config.js";
 import { updateAudioState } from "./audio-state.js";
 import { applyStateUpdate, renderPreviewLeds } from "./device-state.js";
-import { serveViteAsset, transformHtml } from "./dev.js";
 import { paletteData, palettes } from "./palettes.js";
 import { presetsJson } from "./presets.js";
 import { htmlFile, json, readJsonBody, serveFile, serveStatic, text } from "./responses.js";
@@ -14,12 +13,12 @@ import { broadcast, externalFrameLedCount, updateExternalFrame } from "./websock
 import { emulatorStateJson, fullJson, infoObject, siJson } from "./wled-json.js";
 
 type HttpOptions = {
-  devServer?: Parameters<typeof serveViteAsset>[0];
+  devMode?: boolean;
+  transformIndexHtml?: (url: string, html: string) => Promise<string>;
 };
 
 export async function handleHttp(req, res, ctx, options: HttpOptions = {}) {
   const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
-  if (await serveViteAsset(options.devServer, req, res)) return;
 
   if (req.method === "OPTIONS") {
     res.writeHead(204, {
@@ -72,13 +71,21 @@ export async function handleHttp(req, res, ctx, options: HttpOptions = {}) {
     if (url.pathname === "/api/emulator/state") return json(res, emulatorStateJson(ctx));
     if (url.pathname === "/emulator") return redirect(res, "/emulator/");
     if (url.pathname === "/emulator/") {
-      const filePath = options.devServer ? join(emulatorDir, "index.html") : builtOrSourceEmulatorFile("index.html");
-      return htmlFile(res, filePath, (html) => transformHtml(options.devServer, url.pathname, html));
+      const filePath = options.devMode ? join(emulatorDir, "index.html") : builtOrSourceEmulatorFile("index.html");
+      return htmlFile(res, filePath, (html) => transformHtml(options.transformIndexHtml, url.pathname, html));
     }
-    if (url.pathname.startsWith("/emulator/")) return serveEmulatorStatic(res, url.pathname.replace(/^\/emulator\//, ""), Boolean(options.devServer));
+    if (url.pathname === "/emulator/audio-capture.html") {
+      const filePath = options.devMode ? join(emulatorDir, "audio-capture.html") : builtOrSourceEmulatorFile("audio-capture.html");
+      return htmlFile(res, filePath, (html) => transformHtml(options.transformIndexHtml, url.pathname, html));
+    }
+    if (url.pathname === "/emulator/liveview.html") {
+      const filePath = options.devMode ? join(emulatorDir, "liveview.html") : builtOrSourceEmulatorFile("liveview.html");
+      return htmlFile(res, filePath, (html) => transformHtml(options.transformIndexHtml, url.pathname, html));
+    }
+    if (url.pathname.startsWith("/emulator/")) return serveEmulatorStatic(res, url.pathname.replace(/^\/emulator\//, ""), Boolean(options.devMode));
     if (url.pathname === "/liveview" || url.pathname === "/liveview2D") {
-      const filePath = options.devServer ? join(emulatorDir, "liveview.html") : builtOrSourceEmulatorFile("liveview.html");
-      return htmlFile(res, filePath, (html) => transformHtml(options.devServer, url.pathname, html));
+      const filePath = options.devMode ? join(emulatorDir, "liveview.html") : builtOrSourceEmulatorFile("liveview.html");
+      return htmlFile(res, filePath, (html) => transformHtml(options.transformIndexHtml, url.pathname, html));
     }
     if (url.pathname === "/" || url.pathname === "/index.htm") {
       return htmlFile(res, join(wledDir, "index.htm"));
@@ -91,6 +98,10 @@ export async function handleHttp(req, res, ctx, options: HttpOptions = {}) {
   } catch (error) {
     json(res, { error: error.message }, 500);
   }
+}
+
+async function transformHtml(transformIndexHtml: HttpOptions["transformIndexHtml"], url: string, html: string): Promise<string> {
+  return transformIndexHtml ? transformIndexHtml(url, html) : html;
 }
 
 function applyPatch(ctx, patch) {

@@ -4,8 +4,8 @@ This project runs the real WLED browser UI and mobile-app protocol against a loc
 
 ## Runtime Flow
 
-1. `server.ts` creates one app context and starts the HTTP server.
-2. In development, `src/server/dev.ts` attaches Vite middleware and injects the Vite client into emulator HTML only.
+1. In development, `npm run dev` starts the standard Vite dev server.
+2. `src/server/vite-plugin.ts` mounts the WLED-compatible HTTP/WebSocket emulator into Vite middleware and lets Vite own frontend modules, CSS, and HMR.
 3. `src/server/http.ts` serves WLED-compatible JSON endpoints, vendored WLED UI assets, emulator pages, and frame/audio bridge endpoints.
 4. `src/server/websocket.ts` handles the raw WLED WebSocket connection used by the WLED UI and the typed emulator frame/audio bus.
 5. `src/emulator/main.ts` starts the browser-side emulator application through Vite.
@@ -14,13 +14,14 @@ This project runs the real WLED browser UI and mobile-app protocol against a loc
 8. `src/emulator/native-frame.ts` copies fresh native C++ RGB frames into the browser model and clears the LEDs when no fresh native frame exists.
 9. `tools/generate-upstream-fx.mjs` extracts the supported upstream native effects and writes C++ sources plus a JSON support manifest.
 10. `tools/run-cpp-effect.mjs` can compile and run the C++ harness, receive streamed audio, then stream compact RGB frames back into `/api/emulator/frames`.
+11. For non-dev runs, `server.ts` creates the same app context and serves the built emulator assets from `dist/emulator/`.
 
 ## Server Modules
 
 - `src/server/config.ts`: filesystem paths, port, and emulator version.
 - `src/server/audio-state.ts`: normalization and typed bus payloads for emulator audio state.
 - `src/server/context.ts`: process-local emulator state container.
-- `src/server/dev.ts`: Vite middleware and HTML transform helpers for development hot reload.
+- `src/server/vite-plugin.ts`: Vite development integration for WLED-compatible routes, WebSocket upgrades, HTML transforms, and frontend HMR.
 - `src/server/fixture.ts`: daisy-chained ring geometry and default segment layout.
 - `src/server/wled-catalog.ts`: parser for vendored WLED effect metadata and consumer of the generated native-support manifest.
 - `src/server/device-state.ts`: WLED state creation, patch application, normalization, and live-preview LEDs.
@@ -46,7 +47,7 @@ This project runs the real WLED browser UI and mobile-app protocol against a loc
 - `src/emulator/color.ts`: color math, palette interpolation, and effect helper API.
 - `src/emulator/readouts.ts`: side-panel state readouts.
 
-Vite owns browser TypeScript in development and production builds. Development serves `/src/emulator/*.ts` directly through Vite middleware and leaves the vendored WLED UI untransformed; `npm run build` writes bundled browser assets under `dist/emulator/`, and the server prefers those built files for normal `npm start`. The WLED WebSocket handler only claims `/ws` upgrades so Vite's HMR websocket can stay connected under `/emulator/`.
+Vite owns browser TypeScript and CSS in development and production builds. Development uses the normal `vite` CLI, serves `/src/emulator/*.ts` and `/src/emulator/style.css` through Vite, and leaves the vendored WLED UI untransformed. `npm run build` writes bundled browser assets under `dist/emulator/`, and `server.ts` prefers those built files for normal `npm start`. The WLED WebSocket handler only claims `/ws` and `/api/emulator/frames` upgrades so Vite's HMR websocket can stay connected.
 
 ## Native Boundary
 

@@ -9,7 +9,9 @@ npm run audit:native
 npm run cpp:run
 ```
 
-`npm run dev` starts the TypeScript server through `tsx watch` and enables Vite middleware for browser hot reload. `npm start` runs the same TypeScript entrypoint without watch mode.
+`npm run dev` starts the standard Vite dev server on `http://127.0.0.1:5173`. The Vite config mounts the WLED-compatible emulator routes through `src/server/vite-plugin.ts`, so frontend TypeScript and CSS use normal Vite HMR while `/json`, `/ws`, `/api/emulator/*`, and the vendored WLED UI remain available on the same origin.
+
+`npm start` runs `server.ts` without Vite and serves the built emulator from `dist/emulator/`. Run `npm run build` before using `npm start` for a production-style session.
 
 Useful checks after refactors:
 
@@ -53,4 +55,4 @@ The old standalone custom-effect prototype is intentionally kept in `legacy/stan
 
 ## Refactor Boundaries
 
-Prefer keeping WLED protocol behavior in `src/server/`, development server wiring in `src/server/dev.ts`, virtual-output UI behavior in `src/emulator/`, static emulator shell/CSS in `public/emulator/`, native effect work in `cpp_harness/`, generated native artifacts in `cpp_harness/generated/`, automation/bridge scripts in `tools/`, and architectural explanations in `docs/`.
+Prefer keeping WLED protocol behavior in `src/server/`, Vite development wiring in `src/server/vite-plugin.ts`, virtual-output UI behavior and CSS in `src/emulator/`, static emulator HTML shells in `public/emulator/`, native effect work in `cpp_harness/`, generated native artifacts in `cpp_harness/generated/`, automation/bridge scripts in `tools/`, and architectural explanations in `docs/`.

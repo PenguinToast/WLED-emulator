@@ -1,3 +1,4 @@
+import "./style.css";
 import { applyAnalyzerTuning, audioPayload, updateAnalyzerAudio, WEB_AUDIO_ANALYSER_SMOOTHING } from "./audio-core.js";
 
 type DisplayAudioConstraints = MediaTrackConstraints & {
