@@ -2,6 +2,7 @@ import { fixtureMetadata } from "./fixture.js";
 import { paletteData, palettes } from "./palettes.js";
 import { clone } from "./util.js";
 import { emulatorVersion } from "./config.js";
+import { EDC_USERMOD_NAME, edcUsermodEffectRegistration } from "./edc-usermod.js";
 
 export function infoObject(ctx) {
   const uptime = Math.floor((Date.now() - ctx.startedAt) / 1000);
@@ -56,6 +57,10 @@ export function infoObject(ctx) {
         `Vol ${ctx.audio.volume.toFixed(2)} Bass ${ctx.audio.bass.toFixed(2)}`,
         "",
       ],
+      [EDC_USERMOD_NAME]: [
+        `Effect ${edcUsermodEffectRegistration.id} ${ctx.edcUsermodConfig.enabled ? "enabled" : "disabled"}`,
+        `Preset ${ctx.edcUsermodConfig.preset}`,
+      ],
     },
     maps: [{ id: 0 }],
     fixture: fixtureMetadata(),
@@ -87,6 +92,10 @@ export function emulatorStateJson(ctx) {
     palettes,
     paletteData,
     audio: ctx.audio,
+    usermods: {
+      edc: ctx.edcUsermodConfig,
+      registeredEffects: [edcUsermodEffectRegistration],
+    },
     externalFrame: ctx.externalFrame,
     fixture: fixtureMetadata(),
   };

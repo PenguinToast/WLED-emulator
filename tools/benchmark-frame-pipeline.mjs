@@ -80,6 +80,7 @@ async function benchmarkRawCpp(emulatorState) {
       audio.magnitude ?? 0,
       bins.length,
       ...bins,
+      ...edcUsermodFields(emulatorState),
     ];
     for (const [index, segment] of segments.entries()) {
       fields.push(
@@ -175,6 +176,24 @@ function benchmarkFrameStream() {
       }, streamMs);
     };
   });
+}
+
+function edcUsermodFields(emulatorState) {
+  const config = emulatorState.usermods?.edc || {};
+  return [
+    config.enabled === false ? 0 : 1,
+    edcPresetId(config.preset),
+    config.autoAdapt === false ? 0 : 1,
+    config.segmentDelayMs ?? 22,
+    config.outwardFade ?? 8,
+    config.rumbleAmount ?? 42,
+    config.accentAmount ?? 128,
+    config.primaryMinGapMs ?? 118,
+  ];
+}
+
+function edcPresetId(value) {
+  return { auto: 0, fourOnFloor: 1, bassMusic: 2, trance: 3 }[value] ?? 0;
 }
 
 function elapsedSince(started) {

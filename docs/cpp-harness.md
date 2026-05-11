@@ -5,11 +5,12 @@ The C++ harness is the current path for iterating on native custom effects witho
 ## Files
 
 - `cpp_harness/wled_effect_harness.hpp`: host-side compatibility surface for WLED-style effect functions.
-- `cpp_harness/wled_compat.cpp`: implementation of `SEGMENT`, `strip`, palette/color helpers, timing, and the host AudioReactive usermod data exchange.
+- `cpp_harness/wled_compat.cpp`: implementation of `SEGMENT`, `strip`, palette/color helpers, timing, `strip.addEffect()` registration, and the host AudioReactive usermod data exchange.
 - `cpp_harness/generated/upstream_fx_1d.cpp`: generated host-adapted source extracted from vendored WLED `FX.cpp`.
 - `cpp_harness/generated/upstream_fx_1d.hpp`: generated dispatch table mapping official WLED mode IDs to compiled upstream functions.
 - `cpp_harness/generated/upstream_fx_1d_modes.json`: generated support manifest consumed by the server effect catalog.
-- `cpp_harness/custom_effect.cpp`: `mode_edc_custom()` and native dispatch into generated upstream effects.
+- `cpp_harness/edc_usermod.hpp` and `cpp_harness/edc_usermod.cpp`: host-adapted `EDC Dance` usermod, usermod config struct, effect registration metadata, and `mode_edc_custom()`.
+- `cpp_harness/custom_effect.cpp`: native dispatch into the EDC usermod effect or generated upstream effects.
 - `cpp_harness/main.cpp`: stdin/stdout process wrapper that renders every active WLED segment once per frame.
 - `tools/run-cpp-effect.mjs`: compiles the harness, subscribes to emulator audio, polls WLED state, and streams RGB frames back to `/api/emulator/frames`.
 - `tools/benchmark-frame-pipeline.mjs`: measures raw C++ frame throughput and end-to-end WebSocket frame-stream throughput.
@@ -38,6 +39,8 @@ npm run cpp:generate
 ```
 
 The runner now sends the full WLED segment list to the native process each frame. Each segment is rendered with its own `id`, `start`, `stop`, brightness, mode, speed, intensity, custom effect sliders (`c1`/`c2`/`c3`), option toggles (`o1`/`o2`/`o3`), sound simulation selector (`si`), palette, and color slots, matching the daisy-chained ring fixture more closely than the earlier single-segment path.
+
+The runner also sends the persisted `EDC Dance` usermod config once per frame. The native usermod applies that config before rendering segments, which keeps emulator settings close to WLED's `readFromConfig()` and `addToConfig()` lifecycle without adding ArduinoJson to the host process.
 
 Segment brightness is applied inside the upstream effect shim through `SEGMENT.opacity`, while global WLED brightness is applied only when the harness writes the final RGB frame. This keeps low global brightness from feeding back into effects that read, shift, blur, or fade existing pixels between frames.
 
@@ -89,7 +92,7 @@ The audit checks the high-risk native compatibility contracts: WLED runtime fiel
 
 ## Upstream Effect Coverage
 
-The server exposes the official WLED `v0.15.4` effect catalog plus one host custom slot, `EDC Custom` at ID `187`. The native renderer compiles and dispatches 142 official non-2D mode IDs from vendored `FX.cpp`, including the upstream WLED-SR 1D audio-reactive effects such as Pixels, Pixelwave, Juggles, Matripix, Gravimeter, Freqwave, Waterfall, Freqpixels, Noisefire, Noisemove, Ripple Peak, Freqmap, DJ Light, Blurz, and Rocktaves.
+The server exposes the official WLED `v0.15.4` effect catalog plus one usermod-registered slot, `EDC Custom` at ID `187`. The native renderer compiles and dispatches 142 official non-2D mode IDs from vendored `FX.cpp`, including the upstream WLED-SR 1D audio-reactive effects such as Pixels, Pixelwave, Juggles, Matripix, Gravimeter, Freqwave, Waterfall, Freqpixels, Noisefire, Noisemove, Ripple Peak, Freqmap, DJ Light, Blurz, and Rocktaves.
 
 The JSON effect catalog is derived from the generated native dispatch table. Unsupported official slots stay in the array as `RSVD` so WLED mode IDs remain stable, but the WLED UI/app does not offer matrix-only effects that the host shim cannot render.
 
@@ -108,4 +111,4 @@ The host shim implements `UsermodManager::getUMData()` for `USERMOD_ID_AUDIOREAC
 
 Modes that require WLED's 2D matrix renderer are still intentionally skipped in the generated dispatch until the host fixture grows matrix geometry.
 
-`EDC Custom` remains written as a WLED-style `uint16_t mode_edc_custom(void)` function and is the preferred place to iterate on code intended to move into real WLED.
+`EDC Custom` remains written as a WLED-style `uint16_t mode_edc_custom(void)` function, but its ownership is now the `EDC Dance` usermod. The host `strip.addEffect()` shim assigns the same slot that the TypeScript catalog exposes, so iteration follows the real WLED usermod registration pattern.

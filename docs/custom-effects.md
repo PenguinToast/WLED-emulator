@@ -1,6 +1,8 @@
-# WLED-Style Custom Effects
+# WLED-Style Usermod Effects
 
-The C++ harness now supports a WLED-style effect function rather than a separate host-only API. The target shape is:
+The EDC effect is modeled as a WLED v2 usermod that registers a WLED-style effect function. Current WLED guidance for personal/custom effects is to keep the mode function in the usermod and call `strip.addEffect(255, &mode_fn, _data_fx)` from `setup()`, where `255` asks WLED for the first available usermod effect slot.
+
+The effect body still has the normal `FX.cpp` shape:
 
 ```cpp
 uint16_t mode_edc_custom(void) {
@@ -34,13 +36,13 @@ Audio-reactive compatibility globals are also populated from the browser audio a
 - `fftBin[16]`
 - `FFT_MajorPeak`
 
-## Active Custom Mode
+## Active Usermod Mode
 
-The server appends one host custom mode after the official WLED `v0.15.4` catalog:
+The `EDC Dance` usermod registers one effect after the official WLED `v0.15.4` catalog:
 
 - ID `187`: `EDC Custom`
 
-Select `EDC Custom` in the real WLED UI, run `npm run cpp:run`, and the browser emulator will display frames rendered by `mode_edc_custom()` in `cpp_harness/custom_effect.cpp`.
+Select `EDC Custom` in the real WLED UI, run `npm run cpp:run`, and the browser emulator will display frames rendered by `mode_edc_custom()` in `cpp_harness/edc_usermod.cpp`.
 
 The current EDC effect is a beat-based pulse renderer for the daisy-chained ring fixture:
 
@@ -50,7 +52,7 @@ The current EDC effect is a beat-based pulse renderer for the daisy-chained ring
 - Sustained bass energy creates a lower-level automatic rumble glow instead of repeatedly retriggering the full kick pulse.
 - Snare-like mid-band transients create shorter accent-color pulses.
 - Hi-hat/high-band transients add brief sparse accent pulses only on detected high-band hits, not continuously while music is playing.
-- On the EDC multi-segment ring fixture, each ring segment is delayed by its ring position so the pulse travels outward. On a single segment, the same code falls back to a center-out strip pulse.
+- On the EDC multi-segment ring fixture, each active segment is treated as the next physical ring. The effect asks WLED for the current segment ID and active segment count instead of hardcoding LED offsets, so varied ring counts and varied LEDs per ring can be tested by changing the segment layout.
 - Colors come from normal WLED color slots: primary drives kick/bass, secondary drives snare accents, and tertiary drives high sparkle/rumble accents. Selecting a palette adds subtle color progression across beats and rings.
 
 The custom mode exposes WLED sliders as:
@@ -63,9 +65,24 @@ The custom mode exposes WLED sliders as:
 
 ## Carrying Code To Real WLED
 
-For real firmware, copy the `mode_edc_custom()` function body into WLED's effect source or a custom effect/usermod integration and register it with WLED's normal `addEffect(...)` path. The host-only file wrapper, includes, and fallback modes are not meant to be copied.
+For real firmware, carry the `EDC Dance` usermod shape forward: implement a `Usermod` subclass, load persistent fields with `readFromConfig()`, save them with `addToConfig()`, optionally decorate the Usermod Settings page with `appendConfigData()`, and register the effect in `setup()` with `strip.addEffect(255, &mode_edc_custom, _data_FX_MODE_EDC_CUSTOM)`.
 
 Keep effects inside the compatibility surface above if you want local behavior to remain close to real WLED behavior. 2D matrix helpers and the full upstream FastLED/noise API are not shimmed yet.
+
+## Usermod Configuration
+
+The emulator exposes the EDC usermod settings at `/settings/um` and as JSON at `/api/usermods/edc`. The values are persisted in `.edc-emulator/edc-usermod.json` and are sent to the native harness once per frame, mirroring how a real WLED build would have `cfg.json` values loaded before the effect runs.
+
+Current static knobs are deliberately installation/audio-behavior oriented rather than color choices:
+
+- `enabled`: allows disabling the custom effect without removing it from the catalog.
+- `preset`: optional starting points for broad EDM families; adaptive analysis should remain the main behavior during a set.
+- `autoAdapt`: enables the effect's dynamic bass/accent thresholds.
+- `segmentDelayMs`: base outward propagation delay per active segment.
+- `outwardFade`: attenuation applied as pulses move through later segments.
+- `rumbleAmount`: sustained-bass floor used for long low-end energy.
+- `accentAmount`: relative weight for snare and hi-hat style pulses.
+- `primaryMinGapMs`: minimum spacing for the dominant beat pulse.
 
 ## Track Evaluation
 

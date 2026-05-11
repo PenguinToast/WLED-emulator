@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 import { builtEmulatorDir, builtEmulatorHtmlDir, emulatorDir, wledDir } from "./config.js";
 import { updateAudioState } from "./audio-state.js";
 import { applyStateUpdate, renderPreviewLeds } from "./device-state.js";
+import { edcUsermodPresets, edcUsermodSettingsHtml, normalizeEdcUsermodConfig, persistEdcUsermodConfig } from "./edc-usermod.js";
 import { paletteData, palettes } from "./palettes.js";
 import { presetsJson } from "./presets.js";
 import { htmlFile, json, readJsonBody, serveFile, serveStatic, text } from "./responses.js";
@@ -69,6 +70,15 @@ export async function handleHttp(req, res, ctx, options: HttpOptions = {}) {
     }
     if (url.pathname === "/api/emulator/frame") return json(res, ctx.externalFrame);
     if (url.pathname === "/api/emulator/state") return json(res, emulatorStateJson(ctx));
+    if (url.pathname === "/api/usermods/edc" && req.method === "POST") {
+      ctx.edcUsermodConfig = normalizeEdcUsermodConfig(await readJsonBody(req));
+      persistEdcUsermodConfig(ctx.edcUsermodConfig);
+      return json(res, { ok: true, config: ctx.edcUsermodConfig, presets: edcUsermodPresets });
+    }
+    if (url.pathname === "/api/usermods/edc") return json(res, { config: ctx.edcUsermodConfig, presets: edcUsermodPresets });
+    if (url.pathname === "/settings/um" || url.pathname === "/settings/um.htm") {
+      return text(res, edcUsermodSettingsHtml(ctx.edcUsermodConfig), 200, "text/html; charset=utf-8");
+    }
     if (url.pathname === "/emulator") return redirect(res, "/emulator/");
     if (url.pathname === "/emulator/") {
       const filePath = options.devMode ? join(emulatorDir, "index.html") : builtOrSourceEmulatorFile("index.html");
@@ -93,7 +103,7 @@ export async function handleHttp(req, res, ctx, options: HttpOptions = {}) {
     if (["/index.css", "/index.js", "/iro.js", "/rangetouch.js"].includes(url.pathname)) {
       return serveFile(res, join(wledDir, url.pathname.slice(1)));
     }
-    if (url.pathname === "/settings") return text(res, "Settings are not emulated yet. Use the main WLED UI and /emulator.", 200, "text/html; charset=utf-8");
+    if (url.pathname === "/settings") return text(res, settingsIndexHtml(), 200, "text/html; charset=utf-8");
     text(res, "Not found", 404);
   } catch (error) {
     json(res, { error: error.message }, 500);
@@ -112,6 +122,10 @@ function applyPatch(ctx, patch) {
 function redirect(res, location: string) {
   res.writeHead(308, { location });
   res.end();
+}
+
+function settingsIndexHtml() {
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>WLED Settings</title><style>body{font:15px system-ui,sans-serif;background:#101214;color:#f0f4f8;margin:0;padding:24px}a{color:#79c7ff}</style></head><body><h1>WLED Settings</h1><p><a href="/settings/um">Usermod Settings</a></p><p><a href="/">Back to WLED</a></p></body></html>`;
 }
 
 function builtOrSourceEmulatorFile(relativePath: string) {

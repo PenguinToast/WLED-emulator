@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { rootDir, vendorWledDir } from "./config.js";
+import { edcUsermodEffectRegistration } from "./edc-usermod.js";
 
 const OFFICIAL_EFFECT_SLOTS = 187;
 export const HOST_CUSTOM_EFFECT_ID = 187;
@@ -32,9 +33,14 @@ export function loadOfficialWledEffects() {
     effects[index] = name;
     fxdata[index] = data;
   }
-  effects[HOST_CUSTOM_EFFECT_ID] = "EDC Custom";
-  fxdata[HOST_CUSTOM_EFFECT_ID] = "Speed,Beat Focus,Tightness,Bass Adapt,Accent Gate;!,!,!;!;1vf;sx=192,ix=150,c1=190,c2=178,c3=12,pal=4,m12=2,si=0";
+  registerUsermodEffect(effects, fxdata, edcUsermodEffectRegistration);
   return { effects, fxdata };
+}
+
+function registerUsermodEffect(effects, fxdata, registration) {
+  const [name, data = ""] = registration.data.split("@");
+  effects[registration.id] = name;
+  fxdata[registration.id] = data;
 }
 
 function loadNativeSupportedModes() {

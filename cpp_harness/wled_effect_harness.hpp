@@ -52,9 +52,13 @@ using fract8 = uint8_t;
 #define LINEARBLEND 1
 #define FAIR_DATA_PER_SEG 2048
 #define USERMOD_ID_AUDIOREACTIVE 42
+#ifndef PROGMEM
+#define PROGMEM
+#endif
 
 using std::max;
 using std::min;
+using mode_ptr = uint16_t (*)();
 
 uint32_t millis();
 uint32_t micros();
@@ -633,10 +637,18 @@ class HostStrip {
   void fill(uint32_t color);
   void bind(std::vector<CRGB>* target) { leds = target; }
   void selectSegment(uint8_t id);
+  uint8_t addEffect(uint8_t id, mode_ptr modeFn, const char* modeData);
 
  private:
+  struct EffectRegistration {
+    uint8_t id = 255;
+    mode_ptr modeFn = nullptr;
+    const char* modeData = nullptr;
+  };
+
   uint8_t currentSegment = 0;
   std::vector<CRGB>* leds = nullptr;
+  std::vector<EffectRegistration> registeredEffects;
   friend class HostSegment;
 };
 

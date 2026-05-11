@@ -21,6 +21,7 @@ This project runs the real WLED browser UI and mobile-app protocol against a loc
 - `src/server/config.ts`: filesystem paths, local emulator state paths, port, and emulator version.
 - `src/server/audio-state.ts`: normalization and typed bus payloads for emulator audio state.
 - `src/server/context.ts`: process-local emulator state container.
+- `src/server/edc-usermod.ts`: EDC Dance usermod effect registration metadata, persistent config normalization, presets, and the emulator Usermod Settings page.
 - `src/server/vite-plugin.ts`: Vite development integration for WLED-compatible routes, WebSocket upgrades, HTML transforms, and frontend HMR.
 - `src/server/fixture.ts`: daisy-chained ring geometry and default segment layout.
 - `src/server/wled-catalog.ts`: parser for vendored WLED effect metadata and consumer of the generated native-support manifest.
@@ -49,6 +50,8 @@ This project runs the real WLED browser UI and mobile-app protocol against a loc
 
 Vite owns browser TypeScript and CSS in development and production builds. Development uses the normal `vite` CLI, serves `/src/emulator/*.ts` and `/src/emulator/style.css` through Vite, and leaves the vendored WLED UI untransformed. `npm run build` writes bundled browser assets under `dist/emulator/`, and `server.ts` prefers those built files for normal `npm start`. The WLED WebSocket handler only claims `/ws` and `/api/emulator/frames` upgrades so Vite's HMR websocket can stay connected.
 
+The project pins Vite to the current Vite 7 line and aliases `rollup` to `@rollup/wasm-node`. This avoids macOS hardened-runtime/code-signing failures when Codex or other sandboxed hosts try to load Rollup/Rolldown native `.node` bindings, while keeping a standard Vite dev server and HMR workflow.
+
 ## Native Boundary
 
 The native renderer owns effect execution. `tools/generate-upstream-fx.mjs` reads vendored WLED source and writes generated artifacts under `cpp_harness/generated/`:
@@ -57,7 +60,7 @@ The native renderer owns effect execution. `tools/generate-upstream-fx.mjs` read
 - `upstream_fx_1d.hpp`: C++ dispatch table for the native harness.
 - `upstream_fx_1d_modes.json`: server-readable support manifest.
 
-Server code must not parse generated C++ to infer support. `src/server/wled-catalog.ts` uses the JSON manifest to expose supported effect slots and marks unsupported official slots as `RSVD`, preserving WLED mode IDs while keeping the UI away from native-unimplemented modes.
+Server code must not parse generated C++ to infer support. `src/server/wled-catalog.ts` uses the JSON manifest to expose supported effect slots, marks unsupported official slots as `RSVD`, and then registers usermod-contributed effect metadata from `src/server/edc-usermod.ts`. That mirrors WLED's `strip.addEffect(255, ...)` path while keeping one source of truth for emulator-visible custom effects.
 
 The browser renderer is intentionally not an effect engine. It displays frames streamed to `/api/emulator/frames` or, as a fallback, posted to `/api/emulator/frame`; stale or missing native frames produce a dark fixture rather than a JavaScript approximation.
 
@@ -68,6 +71,8 @@ Audio transport uses the same emulator bus. Browser audio sources send typed `au
 Native RGB frames already include WLED's final output brightness from the C++ harness. The harness keeps global brightness out of the effect feedback loop and applies it only when serializing the frame, matching WLED's output/show boundary more closely. The browser renderer draws those native frame values without applying WLED brightness a second time, but it does apply a canvas-only perceptual display curve so low-amplitude upstream effects remain visible on screen.
 
 The native harness keeps WLED segment environment state inside `HostStrip` segments keyed by the WLED segment ID passed from `tools/run-cpp-effect.mjs`, so upstream effects that allocate `SEGENV.data` or depend on `SEGENV.call` can evolve across frames independently on each ring.
+
+`EDC Dance` treats active segments as the fixture topology. Ring propagation uses `strip.getCurrSegmentId()` and `strip.getActiveSegmentsNum()` rather than fixed LED-offset tables, so the same native effect can adapt to a different number of daisy-chained rings or different LED counts per ring.
 
 ## Documentation Rule
 

@@ -103,6 +103,17 @@ void HostStrip::fill(uint32_t color) {
   for (unsigned i = 0; i < leds->size(); i += 1) setPixelColor(i, color);
 }
 
+uint8_t HostStrip::addEffect(uint8_t id, mode_ptr modeFn, const char* modeData) {
+  if (!modeFn || !modeData) return 255;
+  const uint8_t actualId = id == 255 ? FX_MODE_EDC_CUSTOM : id;
+  if (actualId == 255) return 255;
+  for (const EffectRegistration& registration : registeredEffects) {
+    if (registration.id == actualId) return 255;
+  }
+  registeredEffects.push_back({actualId, modeFn, modeData});
+  return actualId;
+}
+
 void HostSegment::setPixelColor(int n, uint32_t color) {
   if (n >= 0) n &= 0xffff;
   if (n < 0 || n >= int(length())) return;

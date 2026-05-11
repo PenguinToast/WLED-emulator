@@ -56,7 +56,9 @@ function isEmulatorRequest(pathname: string): boolean {
   return wledStaticPaths.has(pathname)
     || pathname.startsWith("/json")
     || pathname.startsWith("/api/emulator/")
+    || pathname.startsWith("/api/usermods/")
     || pathname.startsWith("/emulator")
+    || pathname.startsWith("/settings/")
     || pathname === "/edit"
     || pathname === "/upload";
 }

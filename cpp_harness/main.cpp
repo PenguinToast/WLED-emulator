@@ -1,4 +1,4 @@
-#include "wled_effect_harness.hpp"
+#include "edc_usermod.hpp"
 
 #include <iostream>
 
@@ -33,6 +33,7 @@ int main() {
 
   std::vector<CRGB> leds(133);
   EffectContext ctx{leds};
+  edcDanceUsermod.setup();
   int stateBrightness = 255;
   int segmentCount = 0;
   int beat = 0;
@@ -58,6 +59,27 @@ int main() {
       std::cin >> value;
       if (index < int(ctx.audio.bins.size())) ctx.audio.bins[index] = std::max(0.0f, std::min(1.0f, value));
     }
+    int edcEnabled = 1;
+    int edcPreset = 0;
+    int edcAutoAdapt = 1;
+    int edcSegmentDelayMs = 22;
+    int edcOutwardFade = 8;
+    int edcRumbleAmount = 42;
+    int edcAccentAmount = 128;
+    int edcPrimaryMinGapMs = 118;
+    std::cin >> edcEnabled >> edcPreset >> edcAutoAdapt >> edcSegmentDelayMs
+             >> edcOutwardFade >> edcRumbleAmount >> edcAccentAmount >> edcPrimaryMinGapMs;
+    EdcDanceUsermodConfig edcConfig = edcDefaultUsermodConfig();
+    edcConfig.enabled = edcEnabled != 0;
+    edcConfig.preset = clamp8(edcPreset);
+    edcConfig.autoAdapt = edcAutoAdapt != 0;
+    edcConfig.segmentDelayMs = std::max(1, std::min(120, edcSegmentDelayMs));
+    edcConfig.outwardFade = clamp8(std::max(0, std::min(32, edcOutwardFade)));
+    edcConfig.rumbleAmount = clamp8(std::max(0, std::min(128, edcRumbleAmount)));
+    edcConfig.accentAmount = clamp8(std::max(16, std::min(255, edcAccentAmount)));
+    edcConfig.primaryMinGapMs = std::max(60, std::min(300, edcPrimaryMinGapMs));
+    edcApplyUsermodConfig(edcConfig);
+
     for (int index = 0; index < segmentCount; index += 1) {
       int start = 0;
       int id = index;

@@ -1,4 +1,5 @@
 import { createInitialState, normalizeState } from "./device-state.js";
+import { loadEdcUsermodConfig } from "./edc-usermod.js";
 import { createInitialVersionInfo } from "./version-info.js";
 import { loadOfficialWledEffects } from "./wled-catalog.js";
 
@@ -34,6 +35,7 @@ export function createAppContext() {
       frame: 0,
       streamId: "",
     },
+    edcUsermodConfig: loadEdcUsermodConfig(),
     versionInfo: createInitialVersionInfo(),
   };
 }

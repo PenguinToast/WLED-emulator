@@ -70,6 +70,7 @@ function buildHarness() {
     "-Icpp_harness",
     "cpp_harness/main.cpp",
     "cpp_harness/custom_effect.cpp",
+    "cpp_harness/edc_usermod.cpp",
     "cpp_harness/wled_compat.cpp",
     "cpp_harness/generated/upstream_fx_1d.cpp",
     "-o",
@@ -234,6 +235,14 @@ function inputLine(frame, index) {
     frame.magnitude.toFixed(4),
     frame.bins.length,
     ...frame.bins.map((value) => value.toFixed(4)),
+    1,
+    0,
+    1,
+    22,
+    8,
+    42,
+    128,
+    118,
   ];
   let start = 0;
   for (let ring = 0; ring < ringStops.length; ring += 1) {

@@ -6,7 +6,7 @@ import { generateUpstreamFx } from "./generate-upstream-fx.mjs";
 const server = process.env.WLED_EMULATOR_URL || "http://127.0.0.1:5173";
 const cxx = process.env.CXX || "c++";
 const binary = "/tmp/edc-wled-cpp-effect";
-const sources = ["cpp_harness/main.cpp", "cpp_harness/custom_effect.cpp", "cpp_harness/wled_compat.cpp"];
+const sources = ["cpp_harness/main.cpp", "cpp_harness/custom_effect.cpp", "cpp_harness/edc_usermod.cpp", "cpp_harness/wled_compat.cpp"];
 
 async function run(command, args) {
   const child = spawn(command, args, { stdio: "inherit" });
@@ -133,6 +133,7 @@ function tick() {
     audio.magnitude ?? 0,
     bins.length,
     ...bins,
+    ...edcUsermodFields(state),
   ];
   for (const [index, segment] of segments.entries()) {
     fields.push(
@@ -192,6 +193,24 @@ function postFrame(payload) {
 
 function isFreshAudio(audio, now) {
   return Number.isFinite(audio?.updatedAt) && now - audio.updatedAt < audioTimeoutMs;
+}
+
+function edcUsermodFields(state) {
+  const config = state.usermods?.edc || {};
+  return [
+    config.enabled === false ? 0 : 1,
+    edcPresetId(config.preset),
+    config.autoAdapt === false ? 0 : 1,
+    config.segmentDelayMs ?? 22,
+    config.outwardFade ?? 8,
+    config.rumbleAmount ?? 42,
+    config.accentAmount ?? 128,
+    config.primaryMinGapMs ?? 118,
+  ];
+}
+
+function edcPresetId(value) {
+  return { auto: 0, fourOnFloor: 1, bassMusic: 2, trance: 3 }[value] ?? 0;
 }
 
 console.log(`Streaming C++ effect frames to ${server}/emulator`);
