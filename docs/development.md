@@ -28,6 +28,7 @@ Every future code change should include a quick docs check:
 
 - Update `docs/architecture.md` when modules, ownership boundaries, generated artifacts, runtime flow, or data contracts change.
 - Update `docs/cpp-harness.md` when native effect coverage, WLED compatibility shims, custom-effect workflow, audio data, or compile/run commands change.
+- Update `docs/audio-reference-implementations.md` when changing which external audio-sync implementations inform the emulator's FFT, gain, beat, or packet semantics.
 - Update `docs/wled-protocol.md` when `/json`, WebSocket, presets, effect catalog, segment behavior, or app/UI compatibility changes.
 - Update `docs/fixture.md` when ring geometry, segment defaults, or LED counts change.
 - Update `docs/custom-effects.md` when the user-facing custom effect workflow changes.

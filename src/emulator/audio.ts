@@ -30,6 +30,7 @@ export async function startMic() {
     ui.player.pause();
     audio.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
     audio.inputKind = "mic";
+    resetAudioAnalysis();
     audio.source = audio.context.createMediaStreamSource(audio.stream);
     audio.source.connect(audio.analyser);
     ui.status.textContent = "Microphone active. WLED UI changes will drive this output.";
@@ -55,6 +56,7 @@ export async function loadFile(file) {
     disconnectAudio();
     ui.player.src = URL.createObjectURL(file);
     audio.inputKind = "direct";
+    resetAudioAnalysis();
     if (!audio.mediaElementSource) audio.mediaElementSource = audio.context.createMediaElementSource(ui.player);
     audio.source = audio.mediaElementSource;
     audio.source.connect(audio.analyser);
@@ -75,8 +77,7 @@ export function stopAudio() {
   ui.player.load();
   audio.volume = audio.bass = audio.mid = audio.treble = audio.bpm = 0;
   audio.beat = false;
-  audio.bins.fill(0);
-  audio.fftAvg.fill(0);
+  resetAudioAnalysis();
   audio.inputKind = "none";
   audio.majorPeak = 0;
   audio.magnitude = 0;
@@ -177,6 +178,14 @@ function disconnectAudio() {
     for (const track of audio.stream.getTracks()) track.stop();
     audio.stream = null;
   }
+}
+
+function resetAudioAnalysis() {
+  audio.bins.fill(0);
+  audio.fftAvg.fill(0);
+  audio.beatHistory.length = 0;
+  audio.pcAgcSpan = 0;
+  audio.pcAgcInitialized = false;
 }
 
 function broadcastAudioControl(message) {

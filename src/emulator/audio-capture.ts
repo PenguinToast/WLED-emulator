@@ -25,9 +25,12 @@ const captureAudio = {
   beat: false,
   beatEnergy: 0,
   lastBeatAt: 0,
+  beatHistory: [],
   bpm: 0,
   majorPeak: 0,
   magnitude: 0,
+  pcAgcSpan: 0,
+  pcAgcInitialized: false,
   lastBass: 0,
   lastVolume: 0,
   tuning: {
@@ -108,6 +111,7 @@ async function startComputerAudio() {
     }
     captureAudio.stream = stream;
     captureAudio.inputKind = "direct";
+    resetAudioAnalysis();
     captureAudio.source = captureAudio.context.createMediaStreamSource(captureAudio.stream);
     captureAudio.source.connect(captureAudio.analyser);
     ui.status.textContent = "Computer audio streaming to the WLED emulator.";
@@ -122,6 +126,7 @@ async function startMic() {
     disconnectAudio();
     captureAudio.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
     captureAudio.inputKind = "mic";
+    resetAudioAnalysis();
     captureAudio.source = captureAudio.context.createMediaStreamSource(captureAudio.stream);
     captureAudio.source.connect(captureAudio.analyser);
     ui.status.textContent = "Microphone streaming to the WLED emulator.";
@@ -134,8 +139,7 @@ function stopAudio() {
   disconnectAudio();
   captureAudio.volume = captureAudio.bass = captureAudio.mid = captureAudio.treble = captureAudio.bpm = 0;
   captureAudio.beat = false;
-  captureAudio.bins.fill(0);
-  captureAudio.fftAvg.fill(0);
+  resetAudioAnalysis();
   captureAudio.inputKind = "none";
   captureAudio.majorPeak = 0;
   captureAudio.magnitude = 0;
@@ -224,4 +228,12 @@ function disconnectAudio() {
     for (const track of captureAudio.stream.getTracks()) track.stop();
     captureAudio.stream = null;
   }
+}
+
+function resetAudioAnalysis() {
+  captureAudio.bins.fill(0);
+  captureAudio.fftAvg.fill(0);
+  captureAudio.beatHistory.length = 0;
+  captureAudio.pcAgcSpan = 0;
+  captureAudio.pcAgcInitialized = false;
 }

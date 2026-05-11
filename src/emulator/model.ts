@@ -32,9 +32,12 @@ export const audio = {
   beat: false,
   beatEnergy: 0,
   lastBeatAt: 0,
+  beatHistory: [],
   bpm: 0,
   majorPeak: 0,
   magnitude: 0,
+  pcAgcSpan: 0,
+  pcAgcInitialized: false,
   lastBass: 0,
   lastVolume: 0,
   tuning: {

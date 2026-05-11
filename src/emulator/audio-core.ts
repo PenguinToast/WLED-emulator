@@ -16,9 +16,12 @@ type AudioState = {
   beat: boolean;
   beatEnergy: number;
   lastBeatAt: number;
+  beatHistory: number[];
   bpm: number;
   majorPeak: number;
   magnitude: number;
+  pcAgcSpan: number;
+  pcAgcInitialized: boolean;
   lastBass: number;
   lastVolume: number;
   tuning: {
@@ -33,10 +36,15 @@ const WLED_SAMPLE_RATE = 22050;
 const WLED_FFT_SAMPLES = 512;
 const WLED_HZ_PER_BIN = WLED_SAMPLE_RATE / WLED_FFT_SAMPLES;
 const WLED_MIC_ANALYZER_GAIN = 150;
-const DIRECT_ANALYZER_GAIN = 110;
 export const WEB_AUDIO_ANALYSER_SMOOTHING = 0;
 const WLED_FFT_DOWNSCALE = 0.46;
 const WLED_MANUAL_GAIN = 60 / 40 + 1 / 16;
+const PC_SYNC_LOW_HZ = 40;
+const PC_SYNC_HIGH_HZ = 10000;
+const PC_SYNC_BEAT_LOW_HZ = 100;
+const PC_SYNC_BEAT_HIGH_HZ = 500;
+const PC_SYNC_BEAT_HISTORY = 50;
+const PC_SYNC_BEAT_THRESHOLD = 1.2;
 const WLED_PINK = [
   1.7, 1.71, 1.73, 1.78,
   1.68, 1.56, 1.55, 1.63,
@@ -60,12 +68,6 @@ const WLED_BANDS = [
   [86, 104, 1],
   [104, 165, 0.88],
   [165, 215, 0.7],
-];
-const DIRECT_EQ = [
-  4.6, 3.8, 3.0, 2.35,
-  1.8, 1.45, 1.28, 1.15,
-  1.05, 0.98, 0.92, 0.86,
-  0.8, 0.74, 0.68, 0.62,
 ];
 
 export function updateAnalyzerAudio(audio: AudioState) {
@@ -93,8 +95,13 @@ export function updateAnalyzerAudio(audio: AudioState) {
   audio.bass = clamp(rangeAverage(20, 180) * inputGain, 0, 1);
   audio.mid = clamp(rangeAverage(180, 2200) * inputGain, 0, 1);
   audio.treble = clamp(rangeAverage(2200, 9000) * inputGain, 0, 1);
-  updateWledFftBins(audio, hzPerBin, nyquist);
-  updatePeakDetection(audio, previousBass, previousVolume);
+  if (audio.inputKind === "direct") {
+    updatePcSyncFftBins(audio, hzPerBin, nyquist);
+    updatePcSyncBeatDetection(audio);
+  } else {
+    updateWledFftBins(audio, hzPerBin, nyquist);
+    updateWledPeakDetection(audio, previousBass, previousVolume);
+  }
   audio.lastBass = audio.bass;
   audio.lastVolume = audio.volume;
 }
@@ -124,7 +131,7 @@ export function audioPayload(audio: AudioState) {
   };
 }
 
-function updatePeakDetection(audio: AudioState, previousBass: number, previousVolume: number) {
+function updateWledPeakDetection(audio: AudioState, previousBass: number, previousVolume: number) {
   const now = performance.now();
   const lowFrequencyPeak = audio.majorPeak >= 35 && audio.majorPeak <= 190 && audio.magnitude > 0.16;
   const bassRise = audio.bass - previousBass;
@@ -161,19 +168,16 @@ function updateWledFftBins(audio: AudioState, hzPerBin: number, nyquist: number)
   audio.majorPeak = peakMagnitude > 0.03 ? clamp(peakFrequency, 1, 11025) : 0;
   audio.magnitude = peakMagnitude;
 
-  const directInput = audio.inputKind === "direct";
-  const analyzerGain = directInput ? DIRECT_ANALYZER_GAIN : WLED_MIC_ANALYZER_GAIN;
-  const profileCurve = directInput ? DIRECT_EQ : WLED_PINK;
   const gate = audio.tuning.noiseGate;
   const noiseGateOpen = audio.volume > gate || peakMagnitude > gate * 1.5;
   for (let index = 0; index < WLED_BANDS.length; index += 1) {
     const [fromBin, toBin, damping] = WLED_BANDS[index];
     let fftCalc = noiseGateOpen
-      ? averageWledBinRange(audio, fromBin, toBin, hzPerBin) * analyzerGain * inputGain * fftGain * damping
+      ? averageWledBinRange(audio, fromBin, toBin, hzPerBin) * WLED_MIC_ANALYZER_GAIN * inputGain * fftGain * damping
       : 0;
 
     if (noiseGateOpen) {
-      fftCalc *= profileCurve[index] * WLED_FFT_DOWNSCALE * WLED_MANUAL_GAIN;
+      fftCalc *= WLED_PINK[index] * WLED_FFT_DOWNSCALE * WLED_MANUAL_GAIN;
       fftCalc = clamp(fftCalc, 0, 1023);
     }
 
@@ -190,6 +194,96 @@ function updateWledFftBins(audio: AudioState, hzPerBin: number, nyquist: number)
     currentResult *= 0.85 + index / 4.5;
     audio.bins[index] = clamp((currentResult / 16) * 255, 0, 255) / 255;
   }
+}
+
+function updatePcSyncFftBins(audio: AudioState, hzPerBin: number, nyquist: number) {
+  const maxHz = Math.min(PC_SYNC_HIGH_HZ, nyquist);
+  const freqPoints = logFrequencyPoints(PC_SYNC_LOW_HZ, maxHz, audio.bins.length);
+  const gate = audio.tuning.noiseGate;
+  const noiseGateOpen = audio.volume > gate;
+  let bucketMax = 0;
+  let bucketSum = 0;
+  let peakMagnitude = 0;
+  let peakFrequency = 0;
+
+  for (let index = 0; index < audio.bins.length; index += 1) {
+    const fromHz = freqPoints[index];
+    const toHz = freqPoints[index + 1];
+    const band = maxFrequencyInRange(audio, fromHz, toHz, hzPerBin);
+    const scaled = noiseGateOpen ? Math.sqrt(clamp(band.value * audio.tuning.inputGain * audio.tuning.fftGain, 0, 1)) : 0;
+    bucketMax = Math.max(bucketMax, scaled);
+    bucketSum += scaled;
+    if (scaled > peakMagnitude) {
+      peakMagnitude = scaled;
+      peakFrequency = band.frequency;
+    }
+    audio.fftAvg[index] = scaled;
+  }
+
+  updatePcSyncAgc(audio, bucketMax);
+  const span = Math.max(audio.pcAgcSpan || 0, 0.0001);
+  for (let index = 0; index < audio.bins.length; index += 1) {
+    const normalized = clamp(audio.fftAvg[index] / span, 0, 1);
+    const attack = normalized > audio.bins[index] ? 0.75 : 0.08 + (1 - audio.tuning.smoothing) * 0.22;
+    audio.bins[index] = mix(audio.bins[index], normalized, attack);
+  }
+
+  audio.majorPeak = peakMagnitude > 0.02 ? clamp(peakFrequency, 1, maxHz) : 0;
+  audio.magnitude = clamp(peakMagnitude / span, 0, 1);
+  const averageBucket = bucketSum / Math.max(1, audio.bins.length);
+  const rawVolume = bucketMax > 0 ? averageBucket / bucketMax : 0;
+  audio.volume = clamp(Math.max(audio.volume, rawVolume), 0, 1);
+}
+
+function updatePcSyncAgc(audio: AudioState, bucketMax: number) {
+  if (!audio.pcAgcInitialized) {
+    audio.pcAgcInitialized = true;
+    audio.pcAgcSpan = Math.max(bucketMax, 0.05);
+    return;
+  }
+  if (bucketMax > audio.pcAgcSpan) {
+    audio.pcAgcSpan = mix(audio.pcAgcSpan, bucketMax, 0.75);
+  } else {
+    audio.pcAgcSpan = mix(audio.pcAgcSpan, Math.max(bucketMax, 0.05), 0.1);
+  }
+}
+
+function updatePcSyncBeatDetection(audio: AudioState) {
+  const now = performance.now();
+  const beatBand = maxFrequencyInRange(audio, PC_SYNC_BEAT_LOW_HZ, PC_SYNC_BEAT_HIGH_HZ, audio.context ? (audio.context.sampleRate / 2) / audio.freqData.length : WLED_HZ_PER_BIN);
+  const current = Math.sqrt(clamp(beatBand.value * audio.tuning.inputGain * audio.tuning.fftGain, 0, 1));
+  const history = audio.beatHistory;
+  const ready = history.length >= PC_SYNC_BEAT_HISTORY;
+  const average = history.reduce((sum, value) => sum + value, 0) / Math.max(1, history.length);
+  audio.beat = ready && current > average * PC_SYNC_BEAT_THRESHOLD && current > 0.08 && now - audio.lastBeatAt > 120;
+  history.push(current);
+  if (history.length > PC_SYNC_BEAT_HISTORY) history.shift();
+  if (audio.beat) {
+    if (audio.lastBeatAt > 0) {
+      const instantBpm = 60000 / (now - audio.lastBeatAt);
+      if (instantBpm > 60 && instantBpm < 190) audio.bpm = audio.bpm ? mix(audio.bpm, instantBpm, 0.2) : instantBpm;
+    }
+    audio.lastBeatAt = now;
+  }
+}
+
+function logFrequencyPoints(minHz: number, maxHz: number, count: number) {
+  return Array.from({ length: count + 1 }, (_, index) => minHz * Math.pow(maxHz / minHz, index / count));
+}
+
+function maxFrequencyInRange(audio: AudioState, fromHz: number, toHz: number, hzPerBin: number) {
+  const from = Math.max(0, Math.floor(fromHz / hzPerBin));
+  const to = Math.min(audio.freqData.length - 1, Math.ceil(toHz / hzPerBin));
+  let value = 0;
+  let frequency = fromHz;
+  for (let index = from; index <= to; index += 1) {
+    const sample = audio.freqData[index] / 255;
+    if (sample > value) {
+      value = sample;
+      frequency = (index + 0.5) * hzPerBin;
+    }
+  }
+  return { value, frequency };
 }
 
 function averageWledBinRange(audio: AudioState, fromBin: number, toBin: number, hzPerBin: number) {

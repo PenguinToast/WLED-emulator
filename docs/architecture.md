@@ -38,7 +38,7 @@ This project runs the real WLED browser UI and mobile-app protocol against a loc
 - `src/emulator/model.ts`: shared mutable browser model.
 - `src/emulator/dom.ts`: typed DOM element lookup.
 - `src/emulator/transport.ts`: server fetch/poll/WebSocket integration, including the typed native-frame WebSocket bus and HTTP fallback polling.
-- `src/emulator/audio-core.ts`: shared Web Audio analysis, WLED-shaped FFT bin generation, source-specific frequency compensation, and bass transient peak detection.
+- `src/emulator/audio-core.ts`: shared Web Audio analysis, WLED mic FFT bin generation, PC-style direct-audio sync bin generation, and source-specific beat detection.
 - `src/emulator/audio.ts`: main emulator audio controls for local mic/file playback plus opening the persistent capture window for computer/share audio.
 - `src/emulator/audio-capture.ts`: detached mic/computer capture window that streams audio to the emulator frame bus and survives main `/emulator` reloads.
 - `src/emulator/native-frame.ts`: native-frame consumer for the virtual output; it does not approximate WLED effects in JavaScript.

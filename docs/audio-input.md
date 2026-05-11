@@ -21,7 +21,7 @@ All sources feed the same analyzer, so WLED audio-reactive effects receive the s
 - beat/sample-peak state, shown as a `Beat` badge and bass-side flash in the emulator FFT visualizer
 - 16 analyzer bins, shown in the emulator FFT visualizer below the LED preview
 
-The browser streams this audio state once per animation frame, typically around 60 times per second, on the same WebSocket used for native RGB frames. The 16 FFT bins are shaped to match WLED audio-reactive `fftResult` as closely as the browser analyzer allows: the emulator resamples browser FFT data at WLED's 22.05 kHz, 512-sample raw FFT bin centers, averages those into WLED's GEQ ranges, applies default manual gain, rise/fall smoothing, and square-root `FFTScalingMode = 3`. Microphone input keeps WLED's pink-noise compensation, but its default analyzer gain is lower than WLED's embedded mic path because browser/OS mic capture can already be pre-amplified. Direct digital sources, meaning File and Computer audio, use a browser-output profile with a low-frequency lift and high-band restraint so mastered audio kick and bass energy remains visible after WLED's high-bin post-scaling. The C++ runner receives those already-scaled `fftResult` values from the frame bus and only falls back to `GET /api/emulator/audio` when the WebSocket is unavailable. The main emulator page also listens to incoming audio bus messages so the FFT visualizer and volume readouts show capture-window audio.
+The browser streams this audio state once per animation frame, typically around 60 times per second, on the same WebSocket used for native RGB frames. Microphone input is shaped to match WLED audio-reactive `fftResult` as closely as the browser analyzer allows: the emulator resamples browser FFT data at WLED's 22.05 kHz, 512-sample raw FFT bin centers, averages those into WLED's GEQ ranges, applies default manual gain, rise/fall smoothing, and square-root `FFTScalingMode = 3`. Direct digital sources, meaning File and Computer audio, follow the PC sync style used by `Victoare/SR-WLED-audio-server-win`: logarithmic 40 Hz to 10 kHz buckets, max-per-bucket energy, square-root value scaling, rolling AGC, and beat detection from low-frequency history. The C++ runner receives those already-scaled `fftResult` values from the frame bus and only falls back to `GET /api/emulator/audio` when the WebSocket is unavailable. The main emulator page also listens to incoming audio bus messages so the FFT visualizer and volume readouts show capture-window audio.
 
 ## Tuning Controls
 
@@ -34,7 +34,7 @@ The emulator exposes local audio tuning sliders directly below the FFT visualize
 
 For microphone testing, lower `Input gain` first if the FFT bars sit near `1.00` while the room is only moderately loud. Lower `FFT gain` if volume looks reasonable but audio-reactive effects still pin every bin.
 
-## WLED FFT Shape
+## FFT Shapes
 
 WLED's audio-reactive usermod computes a 512-sample FFT at 22.05 kHz, zeros DC, applies a flat-top window, computes magnitudes, and exposes the strongest raw peak as `FFT_MajorPeak`/`FFT_Magnitude`. It then averages raw FFT bins into 16 fixed GEQ bands:
 
@@ -57,9 +57,11 @@ WLED's audio-reactive usermod computes a 512-sample FFT at 22.05 kHz, zeros DC, 
 | 14 | 104-165 | 4479-7106 Hz, damped by 0.88 |
 | 15 | 165-215 | 7106-9259 Hz, damped by 0.70 |
 
-The emulator preserves that fixed-band shape instead of using generic log-spaced bins. Because Web Audio exposes byte magnitudes rather than WLED's raw `arduinoFFT` magnitudes, analyzer gain is calibrated by source type: microphone input uses a WLED-like mic profile, while direct digital audio uses a browser-output profile that lifts the low bins enough for kick drums to register without letting cymbals and upper harmonics dominate every audio-reactive effect.
+The emulator preserves that fixed-band shape for microphone input, where the goal is parity with WLED's embedded audio-reactive path. Because Web Audio exposes byte magnitudes rather than WLED's raw `arduinoFFT` magnitudes, mic analyzer gain is calibrated below the embedded default so browser/OS mic pre-amplification does not immediately saturate every bin.
 
-Bass transients also drive the payload `beat` flag used as WLED's `samplePeak` shim. Effects such as `Ripple Peak` depend on that flag to spawn new ripples, so the detector looks for a low-frequency peak, a fast bass or volume rise, and a short refractory interval instead of using BPM estimation alone.
+Direct digital audio instead models a PC audio-sync sender. The emulator uses 16 logarithmic buckets from 40 Hz to 10 kHz, stores the maximum magnitude in each bucket, square-root scales the values, normalizes them with a rolling automatic gain span, and smooths display/output release with the local `Smoothing` slider. This gives mastered browser/system output the same kind of WLED UDP-sync payload shape as the reference SR-WLED Windows server. See `docs/audio-reference-implementations.md` for the comparison against other public senders.
+
+Bass transients also drive the payload `beat` flag used as WLED's `samplePeak` shim. Effects such as `Ripple Peak` depend on that flag to spawn new ripples. Mic input keeps the low-frequency-peak plus transient detector. Direct digital audio follows the SR-WLED server approach: compare the current 100-500 Hz max against a rolling history and trigger when it crosses the dynamic threshold with a short refractory interval.
 
 ## Browser Capture Notes
 
