@@ -213,19 +213,24 @@ uint16_t mode_edc_custom(void) {
   const uint8_t kickFloor = edcBlend8(fixedKickFloor, adaptiveKickFloor, bassAdapt);
   const uint8_t kickRise = uint8_t(std::max<int16_t>(8, 16 + beatFocus / 24 + (255 - bassAdapt) / 28));
   const uint16_t learnedCooldown = std::min<uint16_t>(182, std::max<uint16_t>(86, state->kickInterval / 3));
-  const uint16_t kickCooldown = std::max<uint16_t>(edcDanceUsermod.config.primaryMinGapMs, edcBlend8(118, uint8_t(learnedCooldown), bassAdapt));
+  const uint16_t minPrimaryGap = std::max<uint16_t>(180, edcDanceUsermod.config.primaryMinGapMs);
+  const uint16_t kickCooldown = std::max<uint16_t>(minPrimaryGap, edcBlend8(118, uint8_t(learnedCooldown), bassAdapt));
   const uint32_t sinceKick = strip.now - state->lastKick;
   const bool nearTempo = state->lastKick != 0
     && state->kickInterval > 220
     && sinceKick > kickCooldown
     && edcAbsDiff8(uint8_t(std::min<uint32_t>(255, sinceKick / 2)), uint8_t(std::min<uint16_t>(255, state->kickInterval / 2))) < 42;
 
-  const bool lowTransient = kickEnergy > edcRiseThreshold(state->lastKickEnergy, samplePeak ? uint8_t(kickRise * 2 / 3) : kickRise, kickFloor);
-  const bool beatHint = samplePeak && kickEnergy > (kickFloor > 10 ? kickFloor - 10 : kickFloor);
-  const bool tempoHint = nearTempo && kickEnergy > (kickFloor > 6 ? kickFloor - 6 : kickFloor);
+  const uint8_t hintedRise = std::max<uint8_t>(6, kickRise / 2);
+  const bool risingKick = kickEnergy > uint16_t(state->lastKickEnergy) + hintedRise;
+  const bool lowTransient = kickEnergy > edcRiseThreshold(state->lastKickEnergy, kickRise, kickFloor);
+  const bool hintedTransient = (samplePeak || nearTempo)
+    && risingKick
+    && kickEnergy > edcRiseThreshold(state->lastKickEnergy, hintedRise, kickFloor)
+    && kickEnergy > uint16_t(state->avgKickEnergy) + 6;
   const bool kickDominant = uint16_t(kickEnergy) * (214 - beatFocus / 5 + bassAdapt / 10) > uint16_t(mid) * 128
     && uint16_t(kickEnergy) * (198 - beatFocus / 6 + bassAdapt / 12) > uint16_t(high) * 128;
-  const bool kick = (lowTransient || beatHint || tempoHint) && kickDominant && kickLevel > kickFloor && sinceKick > kickCooldown;
+  const bool kick = (lowTransient || hintedTransient) && kickDominant && kickLevel > kickFloor && sinceKick > kickCooldown;
 
   const uint8_t accentRise = uint8_t(24 + accentGate * 2 + beatFocus / 20);
   const uint8_t snareFloor = uint8_t(std::min<uint16_t>(220, uint16_t(state->avgMid) + 22 + accentGate * 3 + beatFocus / 16));
