@@ -17,23 +17,38 @@ async function run(command, args) {
 await generateUpstreamFx();
 await run(cxx, ["-std=c++17", "-O2", "-Icpp_harness", ...sources, "cpp_harness/generated/upstream_fx_1d.cpp", "-o", binary]);
 
-const effect = spawn(binary, [], { stdio: ["pipe", "pipe", "inherit"] });
-effect.on("error", (error) => {
-  console.error(error.message);
-  process.exitCode = 1;
-});
-effect.stdin.on("error", (error) => {
-  if (error.code !== "EPIPE") console.error(error.message);
-});
-effect.on("exit", (code) => {
-  if (code !== null && code !== 0) {
-    console.error(`C++ effect exited with ${code}`);
-    process.exit(code);
-  }
-});
-const lines = createInterface({ input: effect.stdout });
 const pending = [];
-lines.on("line", (line) => pending.push(parseFrameLine(line)));
+let effect = null;
+let stopping = false;
+let restartTimer = null;
+
+function startEffect() {
+  effect = spawn(binary, [], { stdio: ["pipe", "pipe", "inherit"] });
+  effect.on("error", (error) => {
+    console.error(`C++ effect error: ${error.message}`);
+    scheduleEffectRestart();
+  });
+  effect.stdin.on("error", (error) => {
+    if (error.code !== "EPIPE") console.error(`C++ effect stdin error: ${error.message}`);
+  });
+  effect.on("exit", (code, signal) => {
+    if (stopping) return;
+    console.error(`C++ effect exited (${signal || (code ?? "unknown")}); restarting...`);
+    scheduleEffectRestart();
+  });
+  createInterface({ input: effect.stdout }).on("line", (line) => pending.push(parseFrameLine(line)));
+}
+
+function scheduleEffectRestart() {
+  if (stopping || restartTimer) return;
+  restartTimer = setTimeout(() => {
+    restartTimer = null;
+    pending.length = 0;
+    startEffect();
+  }, 250);
+}
+
+startEffect();
 
 function parseFrameLine(line) {
   if (!line.startsWith("F ")) return JSON.parse(line);
@@ -117,7 +132,10 @@ function tick() {
   const audio = isFreshAudio(cachedAudio, now) ? cachedAudio : {};
   const bins = Array.isArray(audio.bins) ? audio.bins.slice(0, 16) : [];
   while (bins.length < 16) bins.push(0);
-  if (!effect.stdin.writable) return;
+  if (!effect?.stdin?.writable) {
+    scheduleEffectRestart();
+    return;
+  }
   const fields = [
     ((now - startedAt) / 1000).toFixed(3),
     frame,
@@ -217,8 +235,10 @@ console.log(`Streaming C++ effect frames to ${server}/emulator`);
 const interval = setInterval(tick, 16);
 
 process.on("SIGINT", () => {
+  stopping = true;
   clearInterval(interval);
+  if (restartTimer) clearTimeout(restartTimer);
   frameSocket?.close();
-  effect.kill("SIGINT");
+  effect?.kill("SIGINT");
   process.exit(0);
 });
