@@ -33,7 +33,7 @@ export function loadOfficialWledEffects() {
     fxdata[index] = data;
   }
   effects[HOST_CUSTOM_EFFECT_ID] = "EDC Custom";
-  fxdata[HOST_CUSTOM_EFFECT_ID] = "Speed,Sensitivity,Tightness,Bass Adapt,Accent Gate;!,!,!;!;1vf;sx=192,ix=190,c1=190,c2=178,c3=12,pal=4,m12=2,si=0";
+  fxdata[HOST_CUSTOM_EFFECT_ID] = "Speed,Beat Focus,Tightness,Bass Adapt,Accent Gate;!,!,!;!;1vf;sx=192,ix=190,c1=190,c2=178,c3=12,pal=4,m12=2,si=0";
   return { effects, fxdata };
 }
 

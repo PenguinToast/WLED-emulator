@@ -45,6 +45,7 @@ Select `EDC Custom` in the real WLED UI, run `npm run cpp:run`, and the browser 
 The current EDC effect is a beat-based pulse renderer for the daisy-chained ring fixture:
 
 - Bass/kick transients create the dominant pulse, radiating from the center ring outward with a short decay so normal EDM kicks read as tight hits.
+- `Beat Focus` biases detection toward the dominant low-end rhythm instead of acting as a second audio gain control. Higher values require the kick to stand out more clearly from mid/high content and make snare/hat accents more selective.
 - The kick detector tracks the current song's low-band baseline, low-band peak, and recent kick spacing so the main pulse adapts across different EDM mixes instead of relying on one fixed bass threshold.
 - Sustained bass energy creates a lower-level automatic rumble glow instead of repeatedly retriggering the full kick pulse.
 - Snare-like mid-band transients create shorter accent-color pulses.
@@ -55,7 +56,7 @@ The current EDC effect is a beat-based pulse renderer for the daisy-chained ring
 The custom mode exposes WLED sliders as:
 
 - `Speed`: propagation speed
-- `Sensitivity`: audio hit strength
+- `Beat Focus`: how strongly the effect prioritizes the main low-end beat over secondary mid/high accents
 - `Tightness`: kick pulse decay, higher values are shorter and more beat-locked
 - `Bass Adapt`: how strongly kick detection follows the current track's low-end baseline, peak, and learned kick spacing
 - `Accent Gate`: how selective snare and hi-hat transient detection should be; higher values require cleaner mid/high hits
