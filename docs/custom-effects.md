@@ -46,7 +46,7 @@ Select `EDC Custom` in the real WLED UI, run `npm run cpp:run`, and the browser 
 
 The current EDC effect is a beat-based pulse renderer for the daisy-chained ring fixture:
 
-- Bass/kick transients create the dominant pulse, radiating from the center ring outward with a short decay so normal EDM kicks read as tight hits. Hit strength controls brightness and outward reach, but not tail length: smaller kicks stay weighted toward the inner rings, while stronger hits push farther outward with less attenuation without smearing into the next beat.
+- Bass/kick transients create the dominant pulse as a travelling radial shockwave, not a whole-fixture fill. In the multi-segment ring fixture, pulse age maps to a moving wavefront across ring indices, so each ring gets a bright front and short afterglow as the wave crosses it. Hit strength controls brightness and outward reach, but not tail length: smaller kicks stay weighted toward the inner rings, while stronger hits push farther outward with less attenuation without smearing into the next beat.
 - `Beat Focus` biases detection toward the dominant low-end rhythm instead of acting as a second audio gain control. Higher values require the kick to stand out more clearly from mid/high content and make snare/hat accents more selective.
 - The kick detector uses a firmware-portable onset tracker rather than raw bass loudness: blended sub/punch energy is compared against a short smoothed baseline to produce positive flux, flux floors follow the current track's average and peak behavior, and accepted kicks train a small tempo/phase model. Accepted kicks are capped before they update the adaptive floor so dense drops do not immediately teach the detector that the new noise floor is normal. `samplePeak` can hint at a borderline onset, and once tempo confidence is established the detector can rescue on-grid beats through dense sections where the kick is partially masked by synths/noise. Rescue hits slowly spend tempo confidence instead of reinforcing it, so breakdowns decay out instead of pulsing forever.
 - Learned tempo also shapes pulse motion. Slower intervals stretch pulse lifetime and outward propagation for deeper rumbling movement, while faster intervals shorten both so hard techno reads as quick repeated impacts.
@@ -93,12 +93,12 @@ Current static knobs are deliberately installation/audio-behavior oriented rathe
 Use `tools/evaluate-edc-audio.mjs` for repeatable offline checks against real tracks:
 
 ```sh
-node tools/evaluate-edc-audio.mjs --seconds 75 --offset 15 /path/to/track.mp3
-node tools/evaluate-edc-audio.mjs --beat-focus 160 --impact 190 /path/to/track.mp3
-node tools/evaluate-edc-audio.mjs --truth-bpm 128 /path/to/known-128bpm-house-loop.ogg
+node tools/evaluate-edc-audio.mjs --seconds 75 --offset 15 artifacts/audio/track.mp3
+node tools/evaluate-edc-audio.mjs --beat-focus 160 --impact 190 artifacts/audio/track.mp3
+node tools/evaluate-edc-audio.mjs --truth-bpm 128 artifacts/audio/known-128bpm-house-loop.ogg
 ```
 
-The tool decodes audio with `ffmpeg`, builds 16 normalized PC-sync-style analyzer bins, feeds the native C++ harness, and reports analyzer peaks, tempo-grid ground truth, visual pulse count, beat/pulse matches, median lag, and tail duty. It estimates ground truth by deriving an onset envelope, choosing a likely tempo by autocorrelation, and aligning a beat grid to the strongest onset phase; `--truth-bpm` can override the tempo when a sample has known BPM metadata. This is stricter for house/techno than the older transient-thinning check because it scores against the musical beat grid instead of every low-frequency bump. The `truthConfidence`/`truthReliable` fields should be checked before trusting recall and precision for breakbeat or dubstep samples that may not have a steady beat grid. Downloaded test tracks should stay outside the repo.
+The tool decodes audio with `ffmpeg`, builds 16 normalized PC-sync-style analyzer bins, feeds the native C++ harness, and reports analyzer peaks, tempo-grid ground truth, visual pulse count, beat/pulse matches, median lag, and tail duty. It estimates ground truth by deriving an onset envelope, choosing a likely tempo by autocorrelation, and aligning a beat grid to the strongest onset phase; `--truth-bpm` can override the tempo when a sample has known BPM metadata. This is stricter for house/techno than the older transient-thinning check because it scores against the musical beat grid instead of every low-frequency bump. The `truthConfidence`/`truthReliable` fields should be checked before trusting recall and precision for breakbeat or dubstep samples that may not have a steady beat grid. Downloaded test tracks should be kept in `artifacts/audio/`, whose contents are gitignored.
 
 Recent detector tuning used the cached Nihilore tracks plus three temporary Wikimedia Commons samples so house and dubstep are represented:
 
@@ -108,7 +108,7 @@ Recent detector tuning used the cached Nihilore tracks plus three temporary Wiki
 
 With the ESP32-S3-friendly onset tracker and current live-control defaults, the 30s house reference estimates a 128.6 BPM grid with high confidence and the visual pulses match 59 of 65 beats after the dense-drop rescue pass. Across the broader mixed test set, low tail duty remains the main safety check; low-confidence tempo grids on dubstep references are useful for smoke testing response, but not as authoritative beat labels.
 
-Additional known-BPM checks are kept outside the repo in `/private/tmp/edc-audio`:
+Additional known-BPM checks are kept locally under `artifacts/audio/`:
 
 - `ccmixter-q6-nadeya-deep-house-128.mp3`: Q6, "Nadeya Deep House Remix", BPM 128. The 60s window at offset 45s produced 129 visual hits, 95 matches, 0ms median lag, and 0 tail duty. The phase confidence is low, so treat this as a musical smoke test rather than strict ground truth.
 - `ccmixter-myfreemickey-techno-kit-130.mp3`: My Free Mickey, "techno kit", BPM 130. The 60s window at offset 20s produced 110 visual hits, 96 matches, 0ms median lag, and 0 tail duty.

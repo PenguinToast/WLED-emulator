@@ -12,3 +12,10 @@ dist/
 .env
 .env.*
 .edc-emulator/
+
+# Local downloaded/generated work artifacts. Keep placeholders tracked, ignore contents.
+/artifacts/*
+!/artifacts/.gitkeep
+!/artifacts/audio/
+/artifacts/audio/*
+!/artifacts/audio/.gitkeep

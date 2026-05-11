@@ -240,17 +240,34 @@ static uint16_t edcPulseSegmentDelay(const EdcPulse& pulse) {
   return std::max<uint16_t>(1, uint16_t((uint32_t(base) * edcTempoPct(pulse.tempoMs, 72, 138)) / 100U));
 }
 
+static uint16_t edcShockTrailQ8(uint8_t type) {
+  if (type == 0) return uint16_t(300 + ((255U - SEGMENT.custom1) * 220U) / 255U);
+  if (type == 1) return 260;
+  return 180;
+}
+
+static uint8_t edcShockEnvelope(const EdcPulse& pulse, uint32_t age, uint16_t delay, uint8_t segment) {
+  const uint32_t frontQ8 = (age * 256U) / delay;
+  const uint32_t segmentQ8 = uint32_t(segment) * 256U;
+  if (frontQ8 < segmentQ8) return 0;
+
+  const uint32_t trailQ8 = edcShockTrailQ8(pulse.type);
+  const uint32_t behindQ8 = frontQ8 - segmentQ8;
+  if (behindQ8 > trailQ8) return 0;
+
+  uint8_t envelope = uint8_t(255U - (behindQ8 * 255U) / trailQ8);
+  if (pulse.type == 0) return edcScale8Video(envelope, uint8_t(176 + envelope / 3));
+  if (pulse.type == 1) return edcScale8Video(envelope, uint8_t(148 + envelope / 4));
+  return edcScale8Video(envelope, envelope);
+}
+
 static void edcRenderSegmentPulse(const EdcPulse& pulse, uint32_t age, uint16_t len) {
   const uint8_t segment = edcDanceUsermod.segmentIndex();
   const uint16_t delay = edcPulseSegmentDelay(pulse);
-  const uint32_t segmentDelay = uint32_t(segment) * delay;
-  if (age < segmentDelay) return;
-  const uint32_t delayedAge = age - segmentDelay;
+  const uint32_t maxAge = uint32_t(edcDanceUsermod.segmentCount() - 1U) * delay + (uint32_t(edcShockTrailQ8(pulse.type)) * delay) / 256U;
+  if (age > maxAge) return;
 
-  const uint16_t life = edcPulseLife(pulse);
-  if (delayedAge > life) return;
-
-  const uint8_t envelope = edcPulseEnvelope(pulse.type, delayedAge, life);
+  const uint8_t envelope = edcShockEnvelope(pulse, age, delay, segment);
   const uint8_t falloff = edcPulseOutwardFalloff(pulse);
   const uint8_t segmentEnvelope = envelope > falloff ? uint8_t(envelope - falloff) : 0;
   if (segmentEnvelope < edcPulseEnvelopeFloor(pulse.type)) return;

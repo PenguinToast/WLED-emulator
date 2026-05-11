@@ -55,4 +55,4 @@ The old standalone custom-effect prototype is intentionally kept in `legacy/stan
 
 ## Refactor Boundaries
 
-Prefer keeping WLED protocol behavior in `src/server/`, Vite development wiring in `src/server/vite-plugin.ts`, virtual-output UI behavior and CSS in `src/emulator/`, static emulator HTML shells in `public/emulator/`, native effect work in `cpp_harness/`, generated native artifacts in `cpp_harness/generated/`, automation/bridge scripts in `tools/`, and architectural explanations in `docs/`.
+Prefer keeping WLED protocol behavior in `src/server/`, Vite development wiring in `src/server/vite-plugin.ts`, virtual-output UI behavior and CSS in `src/emulator/`, static emulator HTML shells in `public/emulator/`, native effect work in `cpp_harness/`, generated native artifacts in `cpp_harness/generated/`, automation/bridge scripts in `tools/`, downloaded/local work artifacts in gitignored `artifacts/` subfolders, and architectural explanations in `docs/`.
