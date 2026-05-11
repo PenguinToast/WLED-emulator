@@ -160,6 +160,21 @@ static uint8_t edcTempoPct(uint16_t tempoMs, uint8_t fastPct, uint8_t slowPct) {
   return uint8_t(100U + ((uint32_t(normalized - 480) * (slowPct - 100U)) / 240U));
 }
 
+static uint16_t edcPrimaryKickCooldown(uint16_t interval, uint8_t confidence, uint8_t focus) {
+  uint8_t pct = 48;
+  if (confidence > 112) pct = uint8_t(72 + std::min<uint8_t>(12, focus / 22));
+  else if (confidence > 48) pct = uint8_t(60 + std::min<uint8_t>(9, focus / 32));
+  const uint16_t learned = uint16_t((uint32_t(interval) * pct) / 100U);
+  return std::min<uint16_t>(520, std::max<uint16_t>(220, learned));
+}
+
+static bool edcPrimaryBeatWindow(const EdcPulseState* state, uint32_t sinceKick, bool nearTempo, uint8_t focus) {
+  const uint8_t lockThreshold = uint8_t(116 - std::min<uint8_t>(44, focus / 4));
+  if (state->tempoConfidence <= lockThreshold || state->lastKick == 0) return true;
+  if (nearTempo) return true;
+  return sinceKick > uint32_t(state->kickInterval) + 116U;
+}
+
 static bool edcIsBlack(uint32_t color) {
   return R(color) == 0 && G(color) == 0 && B(color) == 0 && W(color) == 0;
 }
@@ -366,7 +381,7 @@ uint16_t mode_edc_custom(void) {
 
   const uint8_t kickFluxFloor = edcAdaptiveFluxFloor(state->avgKickFlux, state->peakKickFlux, uint8_t(7 + beatFocus / 40), adaptLevel, beatFocus);
   const uint8_t kickEnergyFloor = edcEnergyFloor(state->avgKickEnergy, state->peakKickEnergy, uint8_t(5 + beatFocus / 64), adaptLevel, beatFocus);
-  const uint16_t learnedCooldown = std::min<uint16_t>(214, std::max<uint16_t>(104, (uint32_t(state->kickInterval) * 42U) / 100U));
+  const uint16_t learnedCooldown = edcPrimaryKickCooldown(state->kickInterval, state->tempoConfidence, beatFocus);
   const uint16_t minPrimaryGap = std::max<uint16_t>(150, edcDanceUsermod.config.primaryMinGapMs);
   const uint16_t kickCooldown = std::max<uint16_t>(minPrimaryGap, learnedCooldown);
   const uint32_t sinceKick = strip.now - state->lastKick;
@@ -391,7 +406,8 @@ uint16_t mode_edc_custom(void) {
   const bool kickDominant = uint16_t(kickEnergy) * (214 - beatFocus / 5 + adaptLevel / 10) > uint16_t(mid) * 128
     && uint16_t(kickEnergy) * (198 - beatFocus / 6 + adaptLevel / 12) > uint16_t(high) * 128;
   const bool tempoDominant = nearTempo && kickEnergy > uint16_t(state->avgKickEnergy) + 4U;
-  const bool normalKick = (strongKickFlux || hintedKickFlux || tempoKickFlux) && (kickDominant || tempoDominant) && sinceKick > kickCooldown;
+  const bool primaryBeatWindow = edcPrimaryBeatWindow(state, sinceKick, nearTempo, beatFocus);
+  const bool normalKick = (strongKickFlux || hintedKickFlux || tempoKickFlux) && (kickDominant || tempoDominant) && primaryBeatWindow && sinceKick > kickCooldown;
   const bool kick = normalKick || (tempoRescueKick && sinceKick > kickCooldown);
 
   const uint8_t snareFluxFloor = edcAdaptiveFluxFloor(state->avgSnareFlux, state->peakSnareFlux, uint8_t(8 + accentSelectivity / 18 + beatFocus / 64), adaptLevel / 2, beatFocus / 2);
