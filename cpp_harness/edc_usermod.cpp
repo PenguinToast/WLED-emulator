@@ -8,6 +8,7 @@ static constexpr uint8_t EDC_AUTO_ADAPT_LEVEL = 178;
 
 struct EdcPulse {
   uint32_t born;
+  uint16_t tempoMs;
   uint8_t type;
   uint8_t strength;
   uint8_t colorIndex;
@@ -134,6 +135,21 @@ static void edcTrackKickTempo(EdcPulseState* state, uint32_t now) {
   state->lastKick = now;
 }
 
+static uint16_t edcNormalizedTempoMs(uint16_t tempoMs) {
+  uint16_t normalized = tempoMs ? tempoMs : 480;
+  while (normalized < 320) normalized *= 2;
+  while (normalized > 760) normalized /= 2;
+  return std::min<uint16_t>(720, std::max<uint16_t>(320, normalized));
+}
+
+static uint8_t edcTempoPct(uint16_t tempoMs, uint8_t fastPct, uint8_t slowPct) {
+  const uint16_t normalized = edcNormalizedTempoMs(tempoMs);
+  if (normalized <= 480) {
+    return uint8_t(fastPct + ((uint32_t(normalized - 320) * (100U - fastPct)) / 160U));
+  }
+  return uint8_t(100U + ((uint32_t(normalized - 480) * (slowPct - 100U)) / 240U));
+}
+
 static bool edcIsBlack(uint32_t color) {
   return R(color) == 0 && G(color) == 0 && B(color) == 0 && W(color) == 0;
 }
@@ -166,21 +182,24 @@ static uint8_t edcPulseEnvelope(uint8_t type, uint32_t age, uint16_t life) {
 static void edcSpawnPulse(EdcPulseState* state, uint8_t type, uint8_t strength, uint8_t colorIndex) {
   EdcPulse& pulse = state->pulses[state->cursor % 10];
   pulse.born = strip.now;
+  pulse.tempoMs = state->kickInterval;
   pulse.type = type;
   pulse.strength = strength;
   pulse.colorIndex = colorIndex;
   state->cursor = (state->cursor + 1) % 10;
 }
 
-static uint16_t edcPulseLife(uint8_t type) {
+static uint16_t edcPulseLife(const EdcPulse& pulse) {
   const uint16_t speedTail = 255 - SEGMENT.speed;
-  if (type == 0) {
+  uint16_t base = 115;
+  if (pulse.type == 0) {
     const uint16_t tight = 310 + speedTail / 3;
     const uint16_t loose = 620 + speedTail;
-    return tight + ((loose - tight) * uint16_t(255 - SEGMENT.custom1)) / 255;
+    base = tight + ((loose - tight) * uint16_t(255 - SEGMENT.custom1)) / 255;
+    return uint16_t((uint32_t(base) * edcTempoPct(pulse.tempoMs, 78, 148)) / 100U);
   }
-  if (type == 1) return 210 + uint16_t(255 - SEGMENT.custom1) / 4;
-  return 115;
+  if (pulse.type == 1) base = 210 + uint16_t(255 - SEGMENT.custom1) / 4;
+  return uint16_t((uint32_t(base) * edcTempoPct(pulse.tempoMs, 86, 124)) / 100U);
 }
 
 static uint8_t edcPulseWidth(uint8_t type, uint16_t len) {
@@ -200,14 +219,19 @@ static uint8_t edcPulseOutwardFalloff(const EdcPulse& pulse) {
   return uint8_t(std::min<uint16_t>(224, staticFade + strengthFade));
 }
 
+static uint16_t edcPulseSegmentDelay(const EdcPulse& pulse) {
+  const uint16_t base = edcDanceUsermod.propagationDelayMs();
+  return std::max<uint16_t>(1, uint16_t((uint32_t(base) * edcTempoPct(pulse.tempoMs, 72, 138)) / 100U));
+}
+
 static void edcRenderSegmentPulse(const EdcPulse& pulse, uint32_t age, uint16_t len) {
   const uint8_t segment = edcDanceUsermod.segmentIndex();
-  const uint16_t delay = edcDanceUsermod.propagationDelayMs();
+  const uint16_t delay = edcPulseSegmentDelay(pulse);
   const uint32_t segmentDelay = uint32_t(segment) * delay;
   if (age < segmentDelay) return;
   const uint32_t delayedAge = age - segmentDelay;
 
-  const uint16_t life = edcPulseLife(pulse.type);
+  const uint16_t life = edcPulseLife(pulse);
   if (delayedAge > life) return;
 
   const uint8_t envelope = edcPulseEnvelope(pulse.type, delayedAge, life);
@@ -230,7 +254,7 @@ static void edcRenderSegmentPulse(const EdcPulse& pulse, uint32_t age, uint16_t 
 }
 
 static void edcRenderStripPulse(const EdcPulse& pulse, uint32_t age, uint16_t len) {
-  const uint16_t life = edcPulseLife(pulse.type);
+  const uint16_t life = edcPulseLife(pulse);
   if (age > life) return;
 
   const uint16_t half = std::max<uint16_t>(1, len / 2);
@@ -315,11 +339,15 @@ uint16_t mode_edc_custom(void) {
     && sinceKick + 76U >= state->kickInterval && sinceKick <= uint32_t(state->kickInterval) + 116U;
   const bool strongKickFlux = kickFlux >= kickFluxFloor && kickEnergy >= kickEnergyFloor;
   const bool hintedKickFlux = (samplePeak || nearTempo)
-    && uint16_t(kickFlux) * 4U >= uint16_t(kickFluxFloor) * 3U
+    && uint16_t(kickFlux) * 5U >= uint16_t(kickFluxFloor) * 3U
     && kickEnergy > uint16_t(state->avgKickEnergy) + 5U;
+  const bool tempoKickFlux = nearTempo
+    && kickFlux >= std::max<uint8_t>(2, kickFluxFloor / 2)
+    && kickEnergy > uint16_t(state->avgKickEnergy) + 3U;
   const bool kickDominant = uint16_t(kickEnergy) * (214 - beatFocus / 5 + adaptLevel / 10) > uint16_t(mid) * 128
     && uint16_t(kickEnergy) * (198 - beatFocus / 6 + adaptLevel / 12) > uint16_t(high) * 128;
-  const bool kick = (strongKickFlux || hintedKickFlux) && kickDominant && sinceKick > kickCooldown;
+  const bool tempoDominant = nearTempo && kickEnergy > uint16_t(state->avgKickEnergy) + 4U;
+  const bool kick = (strongKickFlux || hintedKickFlux || tempoKickFlux) && (kickDominant || tempoDominant) && sinceKick > kickCooldown;
 
   const uint8_t snareFluxFloor = edcAdaptiveFluxFloor(state->avgSnareFlux, state->peakSnareFlux, uint8_t(8 + accentSelectivity / 18 + beatFocus / 64), adaptLevel / 2, beatFocus / 2);
   const uint8_t hatFluxFloor = edcAdaptiveFluxFloor(state->avgHatFlux, state->peakHatFlux, uint8_t(7 + accentSelectivity / 16 + beatFocus / 72), adaptLevel / 3, beatFocus / 3);

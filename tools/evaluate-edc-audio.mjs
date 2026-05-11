@@ -14,13 +14,15 @@ const beatLowHz = 100;
 const beatHighHz = 500;
 const beatHistoryLength = 50;
 const beatThreshold = 1.2;
+const truthMinBpm = 78;
+const truthMaxBpm = 190;
 const ringStops = [1, 9, 21, 37, 61, 93, 133];
 const defaultSeconds = 75;
 const defaultOffset = 15;
 
 const args = parseArgs(process.argv.slice(2));
 if (!args.files.length) {
-  console.error("Usage: node tools/evaluate-edc-audio.mjs [--seconds 75] [--offset 15] [--impact 190] <track.mp3> [...]");
+  console.error("Usage: node tools/evaluate-edc-audio.mjs [--seconds 75] [--offset 15] [--impact 190] [--truth-bpm 128] <track.mp3> [...]");
   process.exit(1);
 }
 
@@ -47,6 +49,7 @@ function parseArgs(values) {
     tightness: 190,
     impact: 190,
     accentMix: 18,
+    truthBpm: 0,
     files: [],
   };
   for (let index = 0; index < values.length; index += 1) {
@@ -58,6 +61,7 @@ function parseArgs(values) {
     else if (value === "--tightness") result.tightness = Number(values[++index] || result.tightness);
     else if (value === "--impact") result.impact = Number(values[++index] || result.impact);
     else if (value === "--accent-mix") result.accentMix = Number(values[++index] || result.accentMix);
+    else if (value === "--truth-bpm") result.truthBpm = Number(values[++index] || 0);
     else result.files.push(value);
   }
   return result;
@@ -114,6 +118,7 @@ function analyzeFrames(samples) {
   const beatHistory = [];
   let lastBeatAt = -Infinity;
   let bpm = 0;
+  let previousBeatEnergy = 0;
 
   for (let start = 0; start + windowSize <= samples.length; start += frameStep) {
     const timeMs = (start / sampleRate) * 1000;
@@ -142,6 +147,8 @@ function analyzeFrames(samples) {
 
     const beatBand = maxGoertzel(window, beatLowHz, beatHighHz);
     const currentBeat = Math.sqrt(clamp(beatBand / Math.max(agcSpan, 0.0001), 0, 1));
+    const onset = Math.max(0, currentBeat - previousBeatEnergy);
+    previousBeatEnergy = mix(previousBeatEnergy, currentBeat, currentBeat > previousBeatEnergy ? 0.38 : 0.08);
     const ready = beatHistory.length >= beatHistoryLength;
     const averageBeat = beatHistory.reduce((sum, value) => sum + value, 0) / Math.max(1, beatHistory.length);
     const beat = ready && currentBeat > averageBeat * beatThreshold && currentBeat > 0.08 && timeMs - lastBeatAt > 120;
@@ -166,6 +173,7 @@ function analyzeFrames(samples) {
       mid,
       treble,
       beat,
+      onset,
       bpm,
       majorPeak: major.frequency,
       magnitude: clamp(major.magnitude / Math.max(agcSpan, 0.0001), 0, 1),
@@ -194,10 +202,11 @@ async function renderAndMeasure(frames) {
   child.stdin.end();
   await once(child, "exit");
 
-  const rawAudioBeats = frames
+  const analyzerBeats = frames
     .map((frame, index) => frame.beat ? frame.time * 1000 : null)
     .filter((value) => value !== null);
-  const audioBeats = thinBeats(rawAudioBeats, 300);
+  const truth = tempoGridTruth(frames, args.truthBpm);
+  const audioBeats = truth.beats;
   const visual = outputs.map((rgb, index) => frameBrightness(rgb, index / frameRate));
   const visualHits = detectVisualHits(visual);
   const matches = matchHits(audioBeats, visualHits);
@@ -206,7 +215,10 @@ async function renderAndMeasure(frames) {
     : 0;
   return {
     duration: frames.length / frameRate,
-    rawAudioBeats: rawAudioBeats.length,
+    analyzerBeats: analyzerBeats.length,
+    truthBpm: truth.bpm,
+    truthConfidence: truth.confidence,
+    truthReliable: truth.confidence >= 2,
     audioBeats: audioBeats.length,
     visualHits: visualHits.length,
     matched: matches.length,
@@ -315,6 +327,78 @@ function detectVisualHits(frames) {
     previous = mix(previous, energy, 0.45);
   }
   return hits;
+}
+
+function tempoGridTruth(frames, overrideBpm) {
+  const durationMs = frames.length ? frames[frames.length - 1].time * 1000 : 0;
+  const onsets = frames.map((frame) => Math.pow(clamp(frame.onset * 3.2, 0, 1), 1.35));
+  const lag = overrideBpm > 0 ? Math.max(1, Math.round((60 * frameRate) / overrideBpm)) : estimateBeatLag(onsets);
+  const phase = estimateBeatPhase(onsets, lag);
+  const beats = [];
+  const startTimeMs = (phase / frameRate) * 1000;
+  const intervalMs = (lag / frameRate) * 1000;
+  for (let timeMs = startTimeMs; timeMs <= durationMs + intervalMs * 0.35; timeMs += intervalMs) {
+    if (timeMs >= 0 && timeMs <= durationMs) beats.push(timeMs);
+  }
+  return {
+    beats,
+    bpm: 60 * frameRate / lag,
+    confidence: tempoConfidence(onsets, lag, phase),
+  };
+}
+
+function estimateBeatLag(onsets) {
+  let bestLag = Math.round((60 * frameRate) / 128);
+  let bestScore = -Infinity;
+  const minLag = Math.floor((60 * frameRate) / truthMaxBpm);
+  const maxLag = Math.ceil((60 * frameRate) / truthMinBpm);
+  for (let lag = minLag; lag <= maxLag; lag += 1) {
+    let score = 0;
+    let count = 0;
+    for (let index = lag; index < onsets.length; index += 1) {
+      score += onsets[index] * onsets[index - lag];
+      count += 1;
+    }
+    score /= Math.max(1, count);
+    const bpm = 60 * frameRate / lag;
+    const houseTempoBias = 1 - Math.min(0.18, Math.abs(bpm - 128) / 480);
+    score *= houseTempoBias;
+    if (score > bestScore) {
+      bestScore = score;
+      bestLag = lag;
+    }
+  }
+  return bestLag;
+}
+
+function estimateBeatPhase(onsets, lag) {
+  let bestPhase = 0;
+  let bestScore = -Infinity;
+  for (let phase = 0; phase < lag; phase += 1) {
+    let score = 0;
+    let count = 0;
+    for (let index = phase; index < onsets.length; index += lag) {
+      score += onsets[index] + 0.55 * Math.max(onsets[index - 1] || 0, onsets[index + 1] || 0);
+      count += 1;
+    }
+    score /= Math.max(1, count);
+    if (score > bestScore) {
+      bestScore = score;
+      bestPhase = phase;
+    }
+  }
+  return bestPhase;
+}
+
+function tempoConfidence(onsets, lag, phase) {
+  const gridValues = [];
+  const offValues = [];
+  for (let index = 0; index < onsets.length; index += 1) {
+    const distance = Math.abs(((index - phase + Math.floor(lag / 2)) % lag) - Math.floor(lag / 2));
+    if (distance <= 1) gridValues.push(onsets[index]);
+    else if (distance >= Math.max(3, Math.floor(lag / 4))) offValues.push(onsets[index]);
+  }
+  return average(gridValues) / Math.max(0.0001, average(offValues));
 }
 
 function matchHits(audioBeats, visualHits) {
@@ -426,8 +510,11 @@ function printMetrics(file, metrics) {
   console.log(JSON.stringify({
     track: basename(file),
     durationSeconds: Number(metrics.duration.toFixed(1)),
-    rawAudioBeats: metrics.rawAudioBeats,
-    primaryAudioBeats: metrics.audioBeats,
+    analyzerPeaks: metrics.analyzerBeats,
+    truthBpm: Number(metrics.truthBpm.toFixed(1)),
+    truthConfidence: Number(metrics.truthConfidence.toFixed(2)),
+    truthReliable: metrics.truthReliable,
+    truthBeats: metrics.audioBeats,
     visualHits: metrics.visualHits,
     matched: metrics.matched,
     recall: Number(metrics.recall.toFixed(3)),
