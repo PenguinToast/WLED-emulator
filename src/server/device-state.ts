@@ -26,7 +26,7 @@ export function applyStateUpdate(state, patch, catalog) {
     const next = clone(state.seg);
     for (const segPatch of patch.seg) {
       if (!segPatch || typeof segPatch !== "object") continue;
-      mergeSegmentPatch(next, segPatch);
+      mergeSegmentPatch(next, segPatch, catalog);
     }
     normalizedPatch = { ...patch, seg: next };
   } else if (patch.seg && typeof patch.seg === "object") {
@@ -35,7 +35,7 @@ export function applyStateUpdate(state, patch, catalog) {
       ? [segmentIndexById(next, patch.seg.id)]
       : selectedSegmentIndexes(next);
     for (const index of indexes) {
-      mergeSegmentPatchAt(next, index, patch.seg);
+      mergeSegmentPatchAt(next, index, patch.seg, catalog);
     }
     normalizedPatch = { ...patch, seg: next };
   }
@@ -55,17 +55,61 @@ function selectedSegmentIndexes(segments) {
   return indexes.length ? indexes : [0];
 }
 
-function mergeSegmentPatch(segments, segPatch) {
+function mergeSegmentPatch(segments, segPatch, catalog) {
   const targetIndex = Number.isInteger(segPatch.id) ? segmentIndexById(segments, segPatch.id) : 0;
-  mergeSegmentPatchAt(segments, targetIndex, segPatch);
+  mergeSegmentPatchAt(segments, targetIndex, segPatch, catalog);
 }
 
-function mergeSegmentPatchAt(segments, targetIndex, segPatch) {
-  const { col, ...rest } = segPatch;
+function mergeSegmentPatchAt(segments, targetIndex, segPatch, catalog) {
+  const { col, fxdef, ...rest } = segPatch;
   const base = segments[targetIndex] || { id: targetIndex };
-  const merged = deepMerge(base, rest);
+  const merged = clone(base);
+  if (fxdef && Number.isInteger(rest.fx) && rest.fx !== base.fx) {
+    deepMerge(merged, effectDefaults(catalog, rest.fx));
+  }
+  deepMerge(merged, rest);
   if (Array.isArray(col)) merged.col = mergeColorSlots(base.col, col);
   segments[targetIndex] = merged;
+}
+
+function effectDefaults(catalog, fx) {
+  const defaults = {
+    sx: 128,
+    ix: 128,
+    c1: 128,
+    c2: 128,
+    c3: 16,
+    o1: false,
+    o2: false,
+    o3: false,
+    m12: 0,
+    si: undefined,
+    pal: undefined,
+    rev: undefined,
+    mi: undefined,
+  };
+  const data = String(catalog?.fxdata?.[fx] || "");
+  const defaultPart = data.split(";")[4] || "";
+  for (const token of defaultPart.split(",")) {
+    const [rawKey, rawValue] = token.split("=");
+    const key = rawKey?.trim();
+    if (!key) continue;
+    const value = clampInt(rawValue, 0, 255);
+    if (key === "sx") defaults.sx = value;
+    else if (key === "ix") defaults.ix = value;
+    else if (key === "c1") defaults.c1 = value;
+    else if (key === "c2") defaults.c2 = value;
+    else if (key === "c3") defaults.c3 = clampInt(rawValue, 0, 31);
+    else if (key === "o1") defaults.o1 = value !== 0;
+    else if (key === "o2") defaults.o2 = value !== 0;
+    else if (key === "o3") defaults.o3 = value !== 0;
+    else if (key === "m12") defaults.m12 = clampInt(rawValue, 0, 255);
+    else if (key === "si") defaults.si = clampInt(rawValue, 0, 255);
+    else if (key === "pal") defaults.pal = clampInt(rawValue, 0, palettes.length - 1);
+    else if (key === "rev") defaults.rev = value !== 0;
+    else if (key === "mi") defaults.mi = value !== 0;
+  }
+  return defaults;
 }
 
 function mergeColorSlots(current, patch) {
