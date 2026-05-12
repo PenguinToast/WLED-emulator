@@ -6,7 +6,13 @@ import { generateUpstreamFx } from "./generate-upstream-fx.mjs";
 const server = process.env.WLED_EMULATOR_URL || "http://127.0.0.1:5173";
 const cxx = process.env.CXX || "c++";
 const binary = "/tmp/edc-wled-cpp-effect";
-const sources = ["cpp_harness/main.cpp", "cpp_harness/custom_effect.cpp", "cpp_harness/edc_usermod.cpp", "cpp_harness/wled_compat.cpp"];
+const sources = [
+  "cpp_harness/main.cpp",
+  "cpp_harness/custom_effect.cpp",
+  "cpp_harness/edc_usermod.cpp",
+  "cpp_harness/wled_compat.cpp",
+  "cpp_harness/wled_audio_bridge.cpp",
+];
 
 async function run(command, args) {
   const child = spawn(command, args, { stdio: "inherit" });

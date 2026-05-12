@@ -77,6 +77,7 @@ function buildHarness() {
     "cpp_harness/custom_effect.cpp",
     "cpp_harness/edc_usermod.cpp",
     "cpp_harness/wled_compat.cpp",
+    "cpp_harness/wled_audio_bridge.cpp",
     "cpp_harness/generated/upstream_fx_1d.cpp",
     "-o",
     "/private/tmp/edc-wled-cpp-effect-eval",

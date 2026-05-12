@@ -5,7 +5,8 @@ The C++ harness is the current path for iterating on native custom effects witho
 ## Files
 
 - `cpp_harness/wled_effect_harness.hpp`: host-side compatibility surface for WLED-style effect functions.
-- `cpp_harness/wled_compat.cpp`: implementation of `SEGMENT`, `strip`, palette/color helpers, timing, `strip.addEffect()` registration, and the host AudioReactive usermod data exchange.
+- `cpp_harness/wled_compat.cpp`: implementation of `SEGMENT`, `strip`, palette/color helpers, timing, and `strip.addEffect()` registration.
+- `cpp_harness/wled_audio_bridge.hpp` and `cpp_harness/wled_audio_bridge.cpp`: host AudioReactive usermod data exchange, normalized emulator audio mapping, and the WLED v16 `um_data_t` export surface.
 - `cpp_harness/generated/upstream_fx_1d.cpp`: generated host-adapted source extracted from vendored WLED `FX.cpp`.
 - `cpp_harness/generated/upstream_fx_1d.hpp`: generated dispatch table mapping official WLED mode IDs to compiled upstream functions.
 - `cpp_harness/generated/upstream_fx_1d_modes.json`: generated support manifest consumed by the server effect catalog.
@@ -100,7 +101,7 @@ The JSON effect catalog is derived from the generated native dispatch table. Uns
 
 The server consumes `upstream_fx_1d_modes.json` for this supported-mode contract. Keep that as the boundary between native generation and WLED protocol serving; server modules should not inspect generated C++ headers or source files.
 
-The host shim implements `UsermodManager::getUMData()` for `USERMOD_ID_AUDIOREACTIVE` and feeds the upstream `um_data_t` fields from emulator audio. Browser audio values arrive normalized from `0.0` to `1.0`; the shim applies a simple AGC-style square-root curve for `volumeSmth` so short ring segments still move under normal music levels. The browser audio analyzer emits normalized `fftResult` bins directly. Mic input uses WLED's fixed GEQ ranges, pink-noise compensation, smoothing, and square-root scaling; File and Computer audio use a PC sync shape modeled after `Victoare/SR-WLED-audio-server-win`, with logarithmic 40 Hz to 10 kHz buckets, max-per-bucket energy, square-root scaling, and rolling AGC. The shim maps normalized bins to bytes without adding another curve, so C++ audio-reactive effects consume the same kind of `fftResult[16]` they read in WLED.
+The host AudioReactive bridge implements `UsermodManager::getUMData()` for `USERMOD_ID_AUDIOREACTIVE` and feeds the upstream `um_data_t` fields from emulator audio. Browser audio values arrive normalized from `0.0` to `1.0`; the bridge applies a simple AGC-style square-root curve for `volumeSmth` so short ring segments still move under normal music levels. The browser audio analyzer emits normalized `fftResult` bins directly. Mic input uses WLED's fixed GEQ ranges, pink-noise compensation, smoothing, and square-root scaling; File and Computer audio use a PC sync shape modeled after `Victoare/SR-WLED-audio-server-win`, with logarithmic 40 Hz to 10 kHz buckets, max-per-bucket energy, square-root scaling, and rolling AGC. The bridge maps normalized bins to bytes without adding another curve, so C++ audio-reactive effects consume the same kind of `fftResult[16]` they read in WLED.
 
 - `u_data[0]`: smoothed volume, `volumeSmth`
 - `u_data[1]`: raw volume, `volumeRaw`

@@ -72,6 +72,8 @@ Native RGB frames already include WLED's final output brightness from the C++ ha
 
 The native harness keeps WLED segment environment state inside `HostStrip` segments keyed by the WLED segment ID passed from `tools/run-cpp-effect.mjs`, so upstream effects that allocate `SEGENV.data` or depend on `SEGENV.call` can evolve across frames independently on each ring.
 
+AudioReactive compatibility is isolated in `cpp_harness/wled_audio_bridge.*`. The general WLED compatibility shim owns segment, strip, palette, timing, and effect registration behavior; the audio bridge owns emulator-audio normalization into WLED v16 `um_data_t` slots and the `UsermodManager::getUMData()` surface consumed by upstream audio effects.
+
 `EDC Dance` treats active segments as the fixture topology. Ring propagation uses `strip.getCurrSegmentId()` and `strip.getActiveSegmentsNum()` rather than fixed LED-offset tables, so the same native effect can adapt to a different number of daisy-chained rings or different LED counts per ring.
 
 ## Documentation Rule

@@ -2,9 +2,12 @@ import { readFileSync } from "node:fs";
 
 const harness = readFileSync("cpp_harness/wled_effect_harness.hpp", "utf8");
 const compat = readFileSync("cpp_harness/wled_compat.cpp", "utf8");
+const audioBridgeHeader = readFileSync("cpp_harness/wled_audio_bridge.hpp", "utf8");
+const audioBridge = readFileSync("cpp_harness/wled_audio_bridge.cpp", "utf8");
 const generated = readFileSync("cpp_harness/generated/upstream_fx_1d.cpp", "utf8");
 const manifest = JSON.parse(readFileSync("cpp_harness/generated/upstream_fx_1d_modes.json", "utf8"));
 const uncommentedGenerated = generated.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+const audioSurface = audioBridgeHeader + audioBridge;
 const failures = [];
 
 expect("HostSegment::step is WLED's 32-bit runtime field", /uint32_t\s+step\s*=\s*0;/.test(harness));
@@ -19,10 +22,11 @@ expect("color_add exposes WLED preserve-color-ratio mode", /color_add\s*\([^)]*b
 expect("color_fade exposes WLED video scaling mode", /color_fade\s*\([^)]*bool\s+video\s*=\s*false/.test(harness) && /threshold\s*=\s*uint8_t\(\(maxChannel\s*>>\s*2\)\s*\+\s*1U\)/.test(harness));
 expect("SEGPALETTE is driven by the current segment palette", /#define\s+SEGPALETTE\s+currentSegmentPalette\(\)/.test(harness));
 expect("currentSegmentPalette is implemented in the compatibility layer", /CRGBPalette16\s+currentSegmentPalette\(\)/.test(compat));
-expect("AudioReactive u_data follows WLED v16's 8-slot export", /um_data_t\s+hostAudioData\{8,\s*audioTypes,\s*audioValues\}/.test(compat));
-expect("AudioReactive u_data[1] is backed by uint16_t volumeRaw", /uint16_t\s+volumeRaw\s*=/.test(compat) && /&volumeRaw/.test(compat) && /UMT_UINT16/.test(compat));
-expect("AudioReactive u_data[3] is backed by samplePeak", /bool\s+samplePeak\s*=/.test(compat) && /&samplePeak/.test(compat));
-expect("Host AudioReactive shim does not expose non-WLED fftBin slot", !/fftBin/.test(harness + compat));
+expect("WLED harness imports the AudioReactive bridge boundary", /#include\s+"wled_audio_bridge\.hpp"/.test(harness));
+expect("AudioReactive u_data follows WLED v16's 8-slot export", /um_data_t\s+hostAudioData\{8,\s*audioTypes,\s*audioValues\}/.test(audioSurface));
+expect("AudioReactive u_data[1] is backed by uint16_t volumeRaw", /uint16_t\s+volumeRaw\s*=/.test(audioSurface) && /&volumeRaw/.test(audioSurface) && /UMT_UINT16/.test(audioSurface));
+expect("AudioReactive u_data[3] is backed by samplePeak", /bool\s+samplePeak\s*=/.test(audioSurface) && /&samplePeak/.test(audioSurface));
+expect("Host AudioReactive shim does not expose non-WLED fftBin slot", !/fftBin/.test(harness + compat + audioSurface));
 expect("generated audio effects do not cast u_data[1] to float", !/\*\(float\s*\*\)\s*um_data->u_data\[1\]/.test(uncommentedGenerated));
 
 expect("native manifest modeCount matches mode list length", manifest.modeCount === manifest.modes.length);

@@ -1,6 +1,6 @@
 # Audio Input
 
-The emulator browser app analyzes audio with the Web Audio API and streams normalized bands over `/api/emulator/frames` as typed `audio` WebSocket messages. `GET|POST /api/emulator/audio` remains available as an inspection and manual-injection path, but browser audio streaming is WebSocket-only so transport failures stay visible while developing audio-reactive effects. The C++ harness reads that server audio state and exposes it through the WLED audio-reactive compatibility globals and `UsermodManager::getUMData()`.
+The emulator browser app analyzes audio with the Web Audio API and streams normalized bands over `/api/emulator/frames` as typed `audio` WebSocket messages. `GET|POST /api/emulator/audio` remains available as an inspection and manual-injection path, but browser audio streaming is WebSocket-only so transport failures stay visible while developing audio-reactive effects. The C++ runner reads that server audio state, and `cpp_harness/wled_audio_bridge.*` exposes it through the WLED audio-reactive compatibility globals and `UsermodManager::getUMData()`.
 
 ## Sources
 

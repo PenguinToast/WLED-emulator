@@ -1,15 +1,6 @@
 #include "wled_effect_harness.hpp"
 
 HostStrip strip;
-AudioData audioData;
-float volumeSmth = 0.0f;
-uint16_t volumeRaw = 0;
-float FFT_MajorPeak = 0.0f;
-float my_magnitude = 0.0f;
-bool samplePeak = false;
-uint8_t fftResult[16] = {};
-uint8_t maxVol = 31;
-uint8_t binNum = 8;
 
 namespace {
 const std::array<std::array<uint32_t, 5>, 7> hostPaletteStops = {{
@@ -26,27 +17,6 @@ CRGBPalette16 paletteFromStops(const std::array<uint32_t, 5>& stops) {
   return CRGBPalette16{stops[0], stops[1], stops[2], stops[3], stops[4]};
 }
 
-um_types_t audioTypes[8] = {
-  UMT_FLOAT,
-  UMT_UINT16,
-  UMT_BYTE_ARR,
-  UMT_BYTE,
-  UMT_FLOAT,
-  UMT_FLOAT,
-  UMT_BYTE,
-  UMT_BYTE,
-};
-void* audioValues[8] = {
-  &volumeSmth,
-  &volumeRaw,
-  fftResult,
-  &samplePeak,
-  &FFT_MajorPeak,
-  &my_magnitude,
-  &maxVol,
-  &binNum,
-};
-um_data_t hostAudioData{8, audioTypes, audioValues};
 }
 
 CRGBPalette16 currentSegmentPalette() {
@@ -62,16 +32,6 @@ uint32_t millis() {
 
 uint32_t micros() {
   return strip.now * 1000U;
-}
-
-bool UsermodManager::getUMData(um_data_t** umData, uint8_t modId) {
-  if (modId != USERMOD_ID_AUDIOREACTIVE) return false;
-  if (umData) *umData = &hostAudioData;
-  return true;
-}
-
-um_data_t* simulateSound(uint8_t) {
-  return &hostAudioData;
 }
 
 void HostStrip::selectSegment(uint8_t id) {
@@ -214,18 +174,7 @@ void prepareWledFrame(EffectContext& ctx) {
   strip._virtualSegmentLength = segment.virtualLength();
   strip.now = static_cast<uint32_t>(ctx.time * 1000.0f);
   strip.brightness = ctx.segment.brightness;
-  audioData = ctx.audio;
-  const float weightedVolume = std::max(ctx.audio.volume, std::max(ctx.audio.bass, std::max(ctx.audio.mid, ctx.audio.treble)) * 0.82f);
-  const float agcVolume = std::sqrt(constrain(weightedVolume, 0.0f, 1.0f)) * 255.0f;
-  volumeSmth = constrain(agcVolume, 0.0f, 255.0f);
-  volumeRaw = uint16_t(constrain(ctx.audio.volume * 512.0f, 0.0f, 65535.0f));
-  samplePeak = ctx.audio.beat;
-  FFT_MajorPeak = std::max(1.0f, ctx.audio.majorPeak > 0.0f ? ctx.audio.majorPeak : 1.0f);
-  my_magnitude = constrain(ctx.audio.magnitude * 1024.0f, 0.001f, 1024.0f);
-  for (uint8_t i = 0; i < 16; i += 1) {
-    const float bin = constrain(ctx.audio.bins[i], 0.0f, 1.0f);
-    fftResult[i] = clamp8(bin * 255.0f);
-  }
+  prepareAudioReactiveFrame(ctx.audio);
 }
 
 void finishWledFrame(EffectContext&) {

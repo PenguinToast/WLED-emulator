@@ -21,7 +21,7 @@ npm run audit:native
 npm run build
 node --check tools/run-cpp-effect.mjs
 node tools/generate-upstream-fx.mjs
-c++ -std=c++17 -O2 -Icpp_harness cpp_harness/main.cpp cpp_harness/custom_effect.cpp cpp_harness/wled_compat.cpp cpp_harness/generated/upstream_fx_1d.cpp -o /tmp/edc-wled-cpp-effect
+c++ -std=c++17 -O2 -Icpp_harness cpp_harness/main.cpp cpp_harness/custom_effect.cpp cpp_harness/edc_usermod.cpp cpp_harness/wled_compat.cpp cpp_harness/wled_audio_bridge.cpp cpp_harness/generated/upstream_fx_1d.cpp -o /tmp/edc-wled-cpp-effect
 ```
 
 ## Change Checklist
