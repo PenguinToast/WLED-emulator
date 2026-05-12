@@ -27,6 +27,7 @@ if (!args.files.length) {
 }
 
 buildHarness();
+const ffmpegPath = findFfmpeg();
 
 for (const file of args.files) {
   if (!existsSync(file)) {
@@ -84,7 +85,7 @@ function buildHarness() {
 }
 
 function decodeAudio(file, seconds, offset) {
-  const result = spawnSync("ffmpeg", [
+  const result = spawnSync(ffmpegPath, [
     "-hide_banner",
     "-loglevel",
     "error",
@@ -103,10 +104,28 @@ function decodeAudio(file, seconds, offset) {
     "pipe:1",
   ], { encoding: "buffer", maxBuffer: 1024 * 1024 * 512 });
   if (result.status !== 0) {
-    throw new Error(`ffmpeg failed for ${file}: ${result.stderr?.toString("utf8") || "unknown error"}`);
+    const detail = result.error?.message || result.stderr?.toString("utf8") || `exit ${result.status}`;
+    throw new Error(`${ffmpegPath} failed for ${file}: ${detail}`);
   }
   const samples = new Float32Array(result.stdout.buffer, result.stdout.byteOffset, Math.floor(result.stdout.byteLength / 4));
   return new Float32Array(samples);
+}
+
+function findFfmpeg() {
+  const candidates = [
+    process.env.FFMPEG_PATH,
+    "ffmpeg",
+    "/opt/homebrew/bin/ffmpeg",
+    "/usr/local/bin/ffmpeg",
+    "/usr/local/Cellar/ffmpeg@4/4.4.5_4/bin/ffmpeg",
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    const result = spawnSync(candidate, ["-version"], { stdio: "ignore" });
+    if (result.status === 0) return candidate;
+  }
+
+  throw new Error("ffmpeg is required for audio evaluation. Install it, add it to PATH, or set FFMPEG_PATH=/path/to/ffmpeg.");
 }
 
 function analyzeFrames(samples) {
@@ -200,15 +219,17 @@ function analyzeFrames(samples) {
 }
 
 async function renderAndMeasure(frames) {
-  const child = spawn("/private/tmp/edc-wled-cpp-effect-eval", [], { stdio: ["pipe", "pipe", "inherit"] });
+  const child = spawn("/private/tmp/edc-wled-cpp-effect-eval", [], { stdio: ["pipe", "pipe", "inherit"], env: { ...process.env, EDC_DEBUG: "1" } });
   let pending = "";
   const outputs = [];
+  const debugFrames = [];
   child.stdout.on("data", (chunk) => {
     pending += chunk.toString("utf8");
     const lines = pending.split("\n");
     pending = lines.pop() || "";
     for (const line of lines) {
       if (line.startsWith("F ")) outputs.push(line.slice(2).trim());
+      else if (line.startsWith("{")) debugFrames.push(JSON.parse(line));
     }
   });
 
@@ -225,6 +246,10 @@ async function renderAndMeasure(frames) {
   const audioBeats = truth.beats;
   const visual = outputs.map((rgb, index) => frameBrightness(rgb, index / frameRate));
   const visualHits = detectVisualHits(visual);
+  const primaryHits = detectDebugHits(debugFrames, "primary");
+  const primaryMatches = matchHits(audioBeats, primaryHits);
+  const tempoIntervals = debugFrames.map((frame) => frame?.interval || 0).filter((value) => value > 0);
+  const tempoConfidences = debugFrames.map((frame) => frame?.confidence || 0);
   const matches = matchHits(audioBeats, visualHits);
   const tailDuty = visual.length
     ? visual.filter((frame) => frame.total > 28 && !nearAny(frame.timeMs, audioBeats, 300)).length / visual.length
@@ -237,6 +262,13 @@ async function renderAndMeasure(frames) {
     truthReliable: truth.confidence >= 2,
     audioBeats: audioBeats.length,
     visualHits: visualHits.length,
+    primaryHits: primaryHits.length,
+    primaryMatched: primaryMatches.length,
+    primaryRecall: audioBeats.length ? primaryMatches.length / audioBeats.length : 0,
+    primaryPrecision: primaryHits.length ? primaryMatches.length / primaryHits.length : 0,
+    finalKickInterval: tempoIntervals[tempoIntervals.length - 1] || 0,
+    averageKickInterval: average(tempoIntervals),
+    finalTempoConfidence: tempoConfidences[tempoConfidences.length - 1] || 0,
     matched: matches.length,
     recall: audioBeats.length ? matches.length / audioBeats.length : 0,
     precision: visualHits.length ? matches.length / visualHits.length : 0,
@@ -245,6 +277,12 @@ async function renderAndMeasure(frames) {
     averageTotal: average(visual.map((frame) => frame.total)),
     maxTotal: Math.max(0, ...visual.map((frame) => frame.total)),
   };
+}
+
+function detectDebugHits(frames, key) {
+  return frames
+    .map((frame, index) => frame?.[key] ? index * 1000 / frameRate : null)
+    .filter((value) => value !== null);
 }
 
 function inputLine(frame, index) {
@@ -538,6 +576,13 @@ function printMetrics(file, metrics) {
     truthConfidence: Number(metrics.truthConfidence.toFixed(2)),
     truthReliable: metrics.truthReliable,
     truthBeats: metrics.audioBeats,
+    primaryHits: metrics.primaryHits,
+    primaryMatched: metrics.primaryMatched,
+    primaryRecall: Number(metrics.primaryRecall.toFixed(3)),
+    primaryPrecision: Number(metrics.primaryPrecision.toFixed(3)),
+    finalKickInterval: Math.round(metrics.finalKickInterval),
+    averageKickInterval: Math.round(metrics.averageKickInterval),
+    finalTempoConfidence: metrics.finalTempoConfidence,
     visualHits: metrics.visualHits,
     matched: metrics.matched,
     recall: Number(metrics.recall.toFixed(3)),

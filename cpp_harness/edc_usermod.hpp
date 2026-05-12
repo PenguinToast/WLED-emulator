@@ -5,6 +5,12 @@
 #define USERMOD_ID_EDC_DANCE 55
 
 extern const char _data_FX_MODE_EDC_CUSTOM[] PROGMEM;
+extern uint8_t edcDebugPrimaryPulse;
+extern uint8_t edcDebugSnarePulse;
+extern uint8_t edcDebugHatPulse;
+extern uint8_t edcDebugKickStrength;
+extern uint16_t edcDebugKickInterval;
+extern uint8_t edcDebugTempoConfidence;
 
 enum class EdcDancePreset : uint8_t {
   Auto = 0,

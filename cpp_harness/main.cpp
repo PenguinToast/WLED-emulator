@@ -1,5 +1,6 @@
 #include "edc_usermod.hpp"
 
+#include <cstdlib>
 #include <iostream>
 
 namespace {
@@ -38,6 +39,7 @@ int main() {
   int segmentCount = 0;
   int beat = 0;
   int binCount = 0;
+  const bool debug = std::getenv("EDC_DEBUG") != nullptr;
 
   while (std::cin >> ctx.time
                   >> ctx.frame
@@ -79,6 +81,10 @@ int main() {
     edcConfig.accentAmount = clamp8(std::max(16, std::min(255, edcAccentAmount)));
     edcConfig.primaryMinGapMs = std::max(60, std::min(300, edcPrimaryMinGapMs));
     edcApplyUsermodConfig(edcConfig);
+    edcDebugPrimaryPulse = 0;
+    edcDebugSnarePulse = 0;
+    edcDebugHatPulse = 0;
+    edcDebugKickStrength = 0;
 
     for (int index = 0; index < segmentCount; index += 1) {
       int start = 0;
@@ -124,6 +130,15 @@ int main() {
       else clearRange(leds, start, stop);
     }
 
+    if (debug) {
+      std::cout << "{\"type\":\"debug\",\"primary\":" << int(edcDebugPrimaryPulse)
+                << ",\"snare\":" << int(edcDebugSnarePulse)
+                << ",\"hat\":" << int(edcDebugHatPulse)
+                << ",\"strength\":" << int(edcDebugKickStrength)
+                << ",\"interval\":" << edcDebugKickInterval
+                << ",\"confidence\":" << int(edcDebugTempoConfidence)
+                << "}\n";
+    }
     std::cout << "F ";
     for (const CRGB& led : leds) {
       writeHexByte(applyOutputBrightness(led.r, stateBrightness));
