@@ -3,13 +3,11 @@
 HostStrip strip;
 AudioData audioData;
 float volumeSmth = 0.0f;
-int16_t volumeRaw = 0;
+uint16_t volumeRaw = 0;
 float FFT_MajorPeak = 0.0f;
 float my_magnitude = 0.0f;
 bool samplePeak = false;
-uint8_t samplePeakByte = 0;
 uint8_t fftResult[16] = {};
-float fftBin[16] = {};
 uint8_t maxVol = 31;
 uint8_t binNum = 8;
 
@@ -28,29 +26,27 @@ CRGBPalette16 paletteFromStops(const std::array<uint32_t, 5>& stops) {
   return CRGBPalette16{stops[0], stops[1], stops[2], stops[3], stops[4]};
 }
 
-um_types_t audioTypes[9] = {
+um_types_t audioTypes[8] = {
   UMT_FLOAT,
-  UMT_INT16,
+  UMT_UINT16,
   UMT_BYTE_ARR,
   UMT_BYTE,
   UMT_FLOAT,
   UMT_FLOAT,
   UMT_BYTE,
   UMT_BYTE,
-  UMT_FLOAT_ARR,
 };
-void* audioValues[9] = {
+void* audioValues[8] = {
   &volumeSmth,
   &volumeRaw,
   fftResult,
-  &samplePeakByte,
+  &samplePeak,
   &FFT_MajorPeak,
   &my_magnitude,
   &maxVol,
   &binNum,
-  fftBin,
 };
-um_data_t hostAudioData{9, audioTypes, audioValues};
+um_data_t hostAudioData{8, audioTypes, audioValues};
 }
 
 CRGBPalette16 currentSegmentPalette() {
@@ -222,15 +218,13 @@ void prepareWledFrame(EffectContext& ctx) {
   const float weightedVolume = std::max(ctx.audio.volume, std::max(ctx.audio.bass, std::max(ctx.audio.mid, ctx.audio.treble)) * 0.82f);
   const float agcVolume = std::sqrt(constrain(weightedVolume, 0.0f, 1.0f)) * 255.0f;
   volumeSmth = constrain(agcVolume, 0.0f, 255.0f);
-  volumeRaw = clamp8(ctx.audio.volume * 512.0f);
-  samplePeakByte = ctx.audio.beat ? 1 : 0;
-  samplePeak = samplePeakByte != 0;
+  volumeRaw = uint16_t(constrain(ctx.audio.volume * 512.0f, 0.0f, 65535.0f));
+  samplePeak = ctx.audio.beat;
   FFT_MajorPeak = std::max(1.0f, ctx.audio.majorPeak > 0.0f ? ctx.audio.majorPeak : 1.0f);
   my_magnitude = constrain(ctx.audio.magnitude * 1024.0f, 0.001f, 1024.0f);
   for (uint8_t i = 0; i < 16; i += 1) {
     const float bin = constrain(ctx.audio.bins[i], 0.0f, 1.0f);
     fftResult[i] = clamp8(bin * 255.0f);
-    fftBin[i] = bin * 4096.0f;
   }
 }
 

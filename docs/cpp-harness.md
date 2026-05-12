@@ -50,7 +50,7 @@ The 1D shim also decodes WLED's virtual-strip pixel indexes back to local segmen
 
 The math shim keeps WLED's signed 16-bit trig contract for `sin16_t()` and `cos16_t()`. Effects such as Breathe depend on negative-to-positive sine output and will hard-clip if those helpers are treated as unsigned waves.
 
-The host `beat*()`, `beatsin*()`, `triwave8()`, and `nscale8_video()` helpers preserve WLED/FastLED-style integer wrapping and video-scaling behavior. Some upstream modes pass intentionally wrapped 8-bit ranges such as `-64, 64`; clamping those ranges changes phase motion into pinned output.
+The host `beat*()`, `beatsin*()`, `triwave8()`, `color_blend()`, `color_add()`, `color_fade()`, and `ColorFromPalette()` helpers preserve WLED/FastLED-style integer wrapping, video-scaling, palette blending, and preserve-color-ratio behavior. Some upstream modes pass intentionally wrapped 8-bit ranges such as `-64, 64`; clamping those ranges changes phase motion into pinned output. The shim also keeps WLED's 16-bit `CHSV32` hue type instead of aliasing it to 8-bit `CHSV`, because v16 effects use `CHSV32` for smoother hue motion.
 
 When a segment changes mode or bounds, the shim resets that segment's runtime fields and allocated data, matching WLED's expectation that a new effect starts with a clean segment environment.
 
@@ -109,7 +109,6 @@ The host shim implements `UsermodManager::getUMData()` for `USERMOD_ID_AUDIOREAC
 - `u_data[4]`: dominant frequency estimate, `FFT_MajorPeak`
 - `u_data[5]`: FFT magnitude estimate, `my_magnitude`
 - `u_data[6]` and `u_data[7]`: mutable `maxVol` and `binNum` controls used by several SR effects
-- `u_data[8]`: float FFT bin array, `fftBin`, derived from the normalized `fftResult` bins
 
 Modes that require WLED's 2D matrix renderer or particle-system engine are still intentionally skipped in the generated dispatch until the host fixture grows those compatibility surfaces.
 

@@ -13,9 +13,16 @@ expect("HostSegment::aux0 is WLED's 16-bit runtime field", /uint16_t\s+aux0\s*=\
 expect("HostSegment::aux1 is WLED's 16-bit runtime field", /uint16_t\s+aux1\s*=\s*0;/.test(harness));
 expect("SEGENV.data storage is max-aligned for upstream typed casts", /std::vector<std::max_align_t>\s+storage;/.test(harness));
 expect("CRGBPalette16 has FastLED's 16 RGB entries", /std::array<CRGB,\s*16>\s+entries/.test(harness));
+expect("CHSV32 keeps WLED's 16-bit hue field", /struct\s+CHSV32[\s\S]*uint16_t\s+h;/.test(harness) && !/using\s+CHSV32\s*=\s*CHSV/.test(harness));
+expect("ColorFromPalette handles WLED's no-wrap linear blend", /blendType\s*==\s*LINEARBLEND_NOWRAP/.test(harness));
+expect("color_add exposes WLED preserve-color-ratio mode", /color_add\s*\([^)]*bool\s+preserveCR\s*=\s*true/.test(harness) && /maxChannel\s*>\s*255/.test(harness));
+expect("color_fade exposes WLED video scaling mode", /color_fade\s*\([^)]*bool\s+video\s*=\s*false/.test(harness) && /threshold\s*=\s*uint8_t\(\(maxChannel\s*>>\s*2\)\s*\+\s*1U\)/.test(harness));
 expect("SEGPALETTE is driven by the current segment palette", /#define\s+SEGPALETTE\s+currentSegmentPalette\(\)/.test(harness));
 expect("currentSegmentPalette is implemented in the compatibility layer", /CRGBPalette16\s+currentSegmentPalette\(\)/.test(compat));
-expect("AudioReactive u_data[1] is backed by int16_t volumeRaw", /int16_t\s+volumeRaw\s*=/.test(compat) && /&volumeRaw/.test(compat));
+expect("AudioReactive u_data follows WLED v16's 8-slot export", /um_data_t\s+hostAudioData\{8,\s*audioTypes,\s*audioValues\}/.test(compat));
+expect("AudioReactive u_data[1] is backed by uint16_t volumeRaw", /uint16_t\s+volumeRaw\s*=/.test(compat) && /&volumeRaw/.test(compat) && /UMT_UINT16/.test(compat));
+expect("AudioReactive u_data[3] is backed by samplePeak", /bool\s+samplePeak\s*=/.test(compat) && /&samplePeak/.test(compat));
+expect("Host AudioReactive shim does not expose non-WLED fftBin slot", !/fftBin/.test(harness + compat));
 expect("generated audio effects do not cast u_data[1] to float", !/\*\(float\s*\*\)\s*um_data->u_data\[1\]/.test(uncommentedGenerated));
 
 expect("native manifest modeCount matches mode list length", manifest.modeCount === manifest.modes.length);

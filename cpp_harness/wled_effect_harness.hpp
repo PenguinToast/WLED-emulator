@@ -71,7 +71,23 @@ struct CHSV {
   CHSV() = default;
   CHSV(uint8_t hue, uint8_t sat, uint8_t val) : h(hue), s(sat), v(val) {}
 };
-using CHSV32 = CHSV;
+
+struct CHSV32 {
+  union {
+    struct {
+      uint16_t h;
+      uint8_t s;
+      uint8_t v;
+    };
+    uint32_t hsv32;
+  };
+
+  CHSV32() : h(0), s(0), v(0) {}
+  CHSV32(uint16_t hue, uint8_t sat, uint8_t val) : h(hue), s(sat), v(val) {}
+  CHSV32(uint8_t hue, uint8_t sat, uint8_t val) : h(uint16_t(hue) << 8), s(sat), v(val) {}
+  CHSV32(const CHSV& hsv) : h(uint16_t(hsv.h) << 8), s(hsv.s), v(hsv.v) {}
+  operator CHSV() const { return CHSV(uint8_t(h >> 8), s, v); }
+};
 
 struct CRGB {
   union {
@@ -214,15 +230,22 @@ struct CRGBW {
   union {
     struct { uint8_t b; uint8_t g; uint8_t r; uint8_t w; };
     uint32_t color32;
+    uint8_t raw[4];
   };
 
   CRGBW() : color32(0) {}
   CRGBW(uint8_t red, uint8_t green, uint8_t blue, uint8_t white = 0) : color32(RGBW32(red, green, blue, white)) {}
   CRGBW(uint32_t color) : color32(color) {}
   CRGBW(const CRGB& color) : color32(RGBW32(color.r, color.g, color.b, 0)) {}
+  CRGBW(const CHSV& color);
+  CRGBW(const CHSV32& color);
   operator uint32_t() const { return color32; }
+  const uint8_t& operator[](uint8_t index) const { return raw[index & 0x03]; }
   uint8_t getAverageLight() const { return (uint16_t(r) + g + b + w) / 4; }
 };
+static_assert(sizeof(CHSV32) == sizeof(uint32_t), "CHSV32 must match WLED's packed 32-bit HSV type");
+static_assert(sizeof(CRGBW) == sizeof(uint32_t), "CRGBW must match WLED's packed 32-bit RGBW type");
+static_assert(sizeof(bool) == 1, "AudioReactive samplePeak is exported through WLED's byte-sized usermod slot");
 
 inline void nblendPaletteTowardPalette(CRGBPalette16& current, const CRGBPalette16& target, uint8_t maxChanges) {
   uint8_t changes = 0;
@@ -274,6 +297,11 @@ inline CRGB hsv(float h, float s, float v) {
 }
 
 inline CRGB::CRGB(const CHSV& color) : CRGB(hsv(color.h * 360.0f / 255.0f, color.s / 255.0f, color.v / 255.0f)) {}
+inline CRGB rgbFromHsv32(const CHSV32& color) {
+  return hsv(color.h * 360.0f / 65535.0f, color.s / 255.0f, color.v / 255.0f);
+}
+inline CRGBW::CRGBW(const CHSV& color) : CRGBW(CRGB(color)) {}
+inline CRGBW::CRGBW(const CHSV32& color) : CRGBW(rgbFromHsv32(color)) {}
 inline const CRGB CRGB::Black = CRGB(0, 0, 0);
 inline const CRGB CRGB::White = CRGB(255, 255, 255);
 inline const CRGB CRGB::Red = CRGB(255, 0, 0);
@@ -284,44 +312,87 @@ inline const CRGB CRGB::Orange = CRGB(255, 165, 0);
 inline const CRGB CRGB::DarkOrange = CRGB(255, 80, 0);
 inline const CRGB CRGB::Yellow = CRGB(255, 255, 0);
 
-inline uint32_t color_blend(uint32_t color1, uint32_t color2, uint16_t blend, bool b16 = false) {
-  const uint32_t scale = b16 ? 65535U : 255U;
-  blend = std::min<uint32_t>(blend, scale);
-  const uint32_t keep = scale - blend;
+inline uint32_t color_blend(uint32_t color1, uint32_t color2, uint8_t blend) {
   return RGBW32(
-    (R(color1) * keep + R(color2) * blend) / scale,
-    (G(color1) * keep + G(color2) * blend) / scale,
-    (B(color1) * keep + B(color2) * blend) / scale,
-    (W(color1) * keep + W(color2) * blend) / scale
+    ((uint16_t(R(color1)) << 8) + R(color2) + (uint16_t(R(color2)) * blend) - (uint16_t(R(color1)) * blend)) >> 8,
+    ((uint16_t(G(color1)) << 8) + G(color2) + (uint16_t(G(color2)) * blend) - (uint16_t(G(color1)) * blend)) >> 8,
+    ((uint16_t(B(color1)) << 8) + B(color2) + (uint16_t(B(color2)) * blend) - (uint16_t(B(color1)) * blend)) >> 8,
+    ((uint16_t(W(color1)) << 8) + W(color2) + (uint16_t(W(color2)) * blend) - (uint16_t(W(color1)) * blend)) >> 8
   );
 }
 
-inline uint32_t color_add(uint32_t color1, uint32_t color2, bool = false) {
+inline uint32_t color_add(uint32_t color1, uint32_t color2, bool preserveCR = true) {
+  if (color1 == BLACK) return color2;
+  if (color2 == BLACK) return color1;
+  uint16_t r = R(color1) + R(color2);
+  uint16_t g = G(color1) + G(color2);
+  uint16_t b = B(color1) + B(color2);
+  uint16_t w = W(color1) + W(color2);
+  const uint16_t maxChannel = std::max(std::max(r, g), std::max(b, w));
+  if (preserveCR && maxChannel > 255) {
+    r = (r * 255U) / maxChannel;
+    g = (g * 255U) / maxChannel;
+    b = (b * 255U) / maxChannel;
+    w = (w * 255U) / maxChannel;
+  }
   return RGBW32(
-    std::min(255, R(color1) + R(color2)),
-    std::min(255, G(color1) + G(color2)),
-    std::min(255, B(color1) + B(color2)),
-    std::min(255, W(color1) + W(color2))
+    std::min<uint16_t>(255, r),
+    std::min<uint16_t>(255, g),
+    std::min<uint16_t>(255, b),
+    std::min<uint16_t>(255, w)
   );
 }
 
-inline uint32_t color_fade(uint32_t color, uint8_t brightness, bool = false) {
+inline uint32_t color_fade(uint32_t color, uint8_t brightness, bool video = false) {
+  if (color == BLACK || brightness == 0) return BLACK;
+  if (brightness == 255) return color;
+  const uint8_t maxChannel = std::max(std::max(R(color), G(color)), B(color));
+  auto scaleChannel = [brightness, video, maxChannel](uint8_t value, bool white = false) -> uint8_t {
+    if (!video) return uint8_t((uint16_t(value) * (uint16_t(brightness) + 1U)) >> 8);
+    uint8_t scaled = uint8_t((uint16_t(value) * brightness + 127U) >> 8);
+    const uint8_t threshold = uint8_t((maxChannel >> 2) + 1U);
+    if (white ? value != 0 : value > threshold) scaled = std::max<uint8_t>(1, scaled);
+    return scaled;
+  };
   return RGBW32(
-    R(color) * brightness / 255,
-    G(color) * brightness / 255,
-    B(color) * brightness / 255,
-    W(color) * brightness / 255
+    scaleChannel(R(color)),
+    scaleChannel(G(color)),
+    scaleChannel(B(color)),
+    scaleChannel(W(color), true)
   );
 }
 
-inline void adjust_color(uint32_t& color, uint8_t valueScale, uint8_t, uint8_t) {
-  color = color_fade(color, valueScale, true);
+inline CHSV32 rgbwToHsv32(const CRGBW& color) {
+  const float red = color.r / 255.0f;
+  const float green = color.g / 255.0f;
+  const float blue = color.b / 255.0f;
+  const float maxChannel = std::max(std::max(red, green), blue);
+  const float minChannel = std::min(std::min(red, green), blue);
+  const float delta = maxChannel - minChannel;
+  float hue = 0.0f;
+  if (delta > 0.0f) {
+    if (maxChannel == red) hue = 60.0f * std::fmod((green - blue) / delta, 6.0f);
+    else if (maxChannel == green) hue = 60.0f * (((blue - red) / delta) + 2.0f);
+    else hue = 60.0f * (((red - green) / delta) + 4.0f);
+  }
+  if (hue < 0.0f) hue += 360.0f;
+  const uint8_t saturation = maxChannel <= 0.0f ? 0 : clamp8((delta / maxChannel) * 255.0f);
+  return CHSV32(uint16_t((hue / 360.0f) * 65535.0f), saturation, clamp8(maxChannel * 255.0f));
 }
 
-inline void adjust_color(CRGBW& color, uint8_t valueScale, uint8_t hueShift, uint8_t satScale) {
-  uint32_t packed = color.color32;
-  adjust_color(packed, valueScale, hueShift, satScale);
-  color.color32 = packed;
+inline void adjust_color(CRGBW& color, int32_t hueShift, int32_t satChange, int32_t valueChange) {
+  if (color.color32 == BLACK && valueChange <= 0) return;
+  CHSV32 hsv = rgbwToHsv32(color);
+  hsv.h = uint16_t(hsv.h + (hueShift << 8));
+  hsv.s = uint8_t(std::clamp<int32_t>(int32_t(hsv.s) + satChange, 0, 255));
+  hsv.v = uint8_t(std::clamp<int32_t>(int32_t(hsv.v) + valueChange, 0, 255));
+  color = CRGBW(hsv);
+}
+
+inline void adjust_color(uint32_t& color, int32_t hueShift, int32_t satChange, int32_t valueChange) {
+  CRGBW packed(color);
+  adjust_color(packed, hueShift, satChange, valueChange);
+  color = packed.color32;
 }
 
 inline uint32_t gamma32inv(uint32_t color) { return color; }
@@ -394,16 +465,26 @@ inline uint8_t perlin8(uint32_t x, uint32_t y = 0, uint32_t z = 0) { return inoi
 inline uint16_t perlin16(uint32_t x, uint32_t y = 0, uint32_t z = 0) { return inoise16(x, y, z); }
 
 inline CRGB ColorFromPalette(const CRGBPalette16& palette, uint8_t index, uint8_t brightness = 255, uint8_t blendType = 0) {
+  if (blendType == LINEARBLEND_NOWRAP) {
+    index = uint8_t((uint16_t(index) * 0xf0U) >> 8);
+  }
   const uint8_t entry = index >> 4;
   CRGB color = palette.entries[entry];
-  if (blendType != NOBLEND) {
+  const uint8_t lo4 = index & 0x0f;
+  if (lo4 && blendType != NOBLEND) {
     const CRGB& next = palette.entries[(entry + 1) & 0x0f];
-    const uint8_t amount = (index & 0x0f) << 4;
-    color.r = uint8_t(color.r + ((int16_t(next.r) - color.r) * amount) / 255);
-    color.g = uint8_t(color.g + ((int16_t(next.g) - color.g) * amount) / 255);
-    color.b = uint8_t(color.b + ((int16_t(next.b) - color.b) * amount) / 255);
+    const uint16_t amount = uint16_t(lo4) << 4;
+    const uint16_t keep = 256U - amount;
+    color.r = uint8_t((uint16_t(color.r) * keep + uint16_t(next.r) * amount) >> 8);
+    color.g = uint8_t((uint16_t(color.g) * keep + uint16_t(next.g) * amount) >> 8);
+    color.b = uint8_t((uint16_t(color.b) * keep + uint16_t(next.b) * amount) >> 8);
   }
-  color.nscale8_video(brightness);
+  if (brightness < 255) {
+    const uint16_t scale = uint16_t(brightness) + 1U;
+    color.r = uint8_t((uint16_t(color.r) * scale) >> 8);
+    color.g = uint8_t((uint16_t(color.g) * scale) >> 8);
+    color.b = uint8_t((uint16_t(color.b) * scale) >> 8);
+  }
   return color;
 }
 
@@ -640,7 +721,7 @@ class HostSegment {
   uint16_t virtualHeight() const { return 1; }
   uint16_t nrOfVStrips() const { return 1; }
   bool is2D() const { return false; }
-  bool isActive() const { return true; }
+  bool isActive() const { return stop > start; }
   uint32_t currentColor(uint8_t slot) const { return colors[slot % NUM_COLORS]; }
   bool allocateData(size_t len) {
     if (len == 0) return false;
@@ -716,7 +797,11 @@ class HostStrip {
   uint16_t getFrameTime() const { return FRAMETIME_FIXED; }
   bool isOffRefreshRequired() const { return false; }
   uint8_t getBrightness() const { return brightness; }
-  uint8_t getActiveSegmentsNum() const { return _segments.size(); }
+  uint8_t getActiveSegmentsNum() const {
+    return uint8_t(std::count_if(_segments.begin(), _segments.end(), [](const HostSegment& segment) {
+      return segment.isActive();
+    }));
+  }
   uint8_t getSegmentsNum() const { return _segments.size(); }
   uint8_t getCurrSegmentId() const { return currentSegment; }
   uint8_t getMaxSegments() const { return 32; }
@@ -749,13 +834,11 @@ class HostStrip {
 extern HostStrip strip;
 extern AudioData audioData;
 extern float volumeSmth;
-extern int16_t volumeRaw;
+extern uint16_t volumeRaw;
 extern float FFT_MajorPeak;
 extern float my_magnitude;
 extern bool samplePeak;
-extern uint8_t samplePeakByte;
 extern uint8_t fftResult[16];
-extern float fftBin[16];
 extern uint8_t maxVol;
 extern uint8_t binNum;
 
