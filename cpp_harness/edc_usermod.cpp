@@ -271,7 +271,7 @@ static uint8_t edcShockEnvelope(const EdcPulse& pulse, uint32_t age, uint16_t de
   if (behindQ8 > trailQ8) return 0;
 
   uint8_t envelope = uint8_t(255U - (behindQ8 * 255U) / trailQ8);
-  if (pulse.type == 0) return edcScale8Video(envelope, uint8_t(176 + envelope / 3));
+  if (pulse.type == 0) return edcScale8Video(envelope, uint8_t(std::min<uint16_t>(255, 176U + envelope / 3U)));
   if (pulse.type == 1) return edcScale8Video(envelope, uint8_t(148 + envelope / 4));
   return edcScale8Video(envelope, envelope);
 }
