@@ -41,6 +41,23 @@ This script is useful as a compact example of the WLED audio-sync v2 packet idea
 
 Do not use this as the emulator's analyzer reference.
 
+## Beat and Onset References
+
+The EDC effect is not trying to embed a full music-information-retrieval library in WLED, but the detector borrows the shape of proven open-source beat trackers:
+
+- [aubio](https://github.com/aubio/aubio) is a C audio-analysis library with onset methods, tempo tracking, beat detection, FFT, and filters. Its project page also emphasizes causal operation for low-latency real-time use, which matches the firmware constraint better than offline-only analysis.
+- [BTrack](https://github.com/adamstark/BTrack) is a real-time C++ beat tracker. It can process either raw audio frames or precomputed onset-detection-function samples, then reports whether a beat is due in the current frame. That split validates our local architecture: browser/emulator audio analysis feeds compact WLED-style bands, and the usermod tracks onset/tempo from those values.
+- [Essentia RhythmExtractor2013](https://essentia.upf.edu/reference/streaming_RhythmExtractor2013.html) is useful as an offline quality reference because it reports beat ticks, BPM, confidence, BPM estimates, and beat intervals using multifeature or Degara beat trackers. Essentia's tutorial explicitly notes that RhythmExtractor2013 relies on whole-track statistics and is not suited for real-time detection, so we should use its ideas and test methodology rather than porting it into the effect.
+- Essentia's rhythm tutorial also highlights BPM histograms and loop-specific BPM estimation. For our evaluator, that supports scoring against a stable beat grid with a confidence flag instead of treating every bass transient as ground truth.
+
+Practical takeaways for the ESP32-S3 usermod:
+
+- Detect positive onset flux against a smoothed baseline instead of raw low-bin loudness.
+- Maintain adaptive onset floors from both average and peak behavior so drops with a higher noise floor do not permanently saturate the detector.
+- Separate kick, snare, and hat evidence by band shape, then let only the kick train the primary tempo/phase model.
+- Keep a tempo candidate and phase window so repeated offbeat/subdivision hits must prove themselves before they can move the main beat grid.
+- Allow on-grid rescue hits during dense drops, but do not let rescue hits reinforce confidence as strongly as normal detections.
+
 ## Emulator Choice
 
 The emulator uses a two-profile strategy:

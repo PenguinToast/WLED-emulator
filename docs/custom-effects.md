@@ -57,6 +57,14 @@ The current EDC effect is a beat-based pulse renderer for the daisy-chained ring
 - On the EDC multi-segment ring fixture, each active segment is treated as the next physical ring. The effect asks WLED for the current segment ID and active segment count instead of hardcoding LED offsets, so varied ring counts and varied LEDs per ring can be tested by changing the segment layout.
 - Colors come from normal WLED color slots: primary drives kick/bass, secondary drives snare accents, and tertiary drives high sparkle/rumble accents. Selecting a palette adds subtle color progression across beats and rings.
 
+The implementation is organized as a small pipeline so future detector work does not tangle rendering and audio decisions:
+
+- `EdcAudioFrame`: reads the WLED/SR fields for the current frame and maps them into kick, snare, hat, broadband volume, and low-range inputs.
+- `EdcOnsetFrame`: derives positive flux and adaptive floors from smoothed/peak state.
+- `EdcKickDecision`: applies tempo-window, dominance, cooldown, and rescue logic for the primary beat pulse.
+- `edcHandleKick()` and `edcHandleAccents()`: mutate tempo/pulse state and spawn pulse records.
+- `edcRenderActivePulses()` and `edcRenderRumble()`: render travelling shockwaves and sustained low-end glow from the pulse state only.
+
 The custom mode exposes WLED sliders for live tuning only where the automatic detector cannot know the desired show feel:
 
 - `Speed`: outward propagation speed between rings.
