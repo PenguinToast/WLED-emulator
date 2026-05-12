@@ -40,7 +40,7 @@ If no docs need edits, still verify the relevant docs are correct before finishi
 
 ## Generated Files
 
-`tools/generate-upstream-fx.mjs` owns everything in `cpp_harness/generated/`. The server consumes `cpp_harness/generated/upstream_fx_1d_modes.json` as a stable support manifest; it should not scrape generated C++ headers or source files.
+`tools/generate-upstream-fx.mjs` owns everything in `cpp_harness/generated/` and normalizes generated text so run commands do not leave whitespace-only churn. The server consumes `cpp_harness/generated/upstream_fx_1d_modes.json` as a stable support manifest; it should not scrape generated C++ headers or source files.
 
 ## Active Routes
 
