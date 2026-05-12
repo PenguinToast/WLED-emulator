@@ -52,8 +52,8 @@ The current EDC effect is a beat-based pulse renderer for the daisy-chained ring
 - Learned tempo also shapes pulse motion. Slower intervals stretch pulse lifetime and outward propagation for deeper rumbling movement, while faster intervals shorten both so hard techno reads as quick repeated impacts.
 - The detector is intentionally ESP32-S3 friendly: byte-sized band state, integer IIR filters, no heap allocation beyond normal WLED `SEGENV` effect data, and no local FFT/ML work inside the effect. It consumes the same `fftResult[16]`, `volumeSmth`, and `samplePeak` values that WLED-SR audio-reactive effects already receive.
 - Sustained or off-grid bass energy creates a lower-level automatic rumble glow instead of repeatedly retriggering the full kick pulse.
-- Snare-like mid-band transients create shorter accent-color pulses.
-- Hi-hat/high-band transients add brief sparse accent pulses only on detected high-band hits, not continuously while music is playing.
+- Snare-like mid-band transients create shorter accent-color pulses whose pattern reacts to the detected sound. Mid-heavy hits render as opposing body arcs, balanced clap-like hits add broken fill, and bright high-mid cracks add a denser sparkle layer.
+- Hi-hat/high-band transients add brief sparse accent pulses only on detected high-band hits, not continuously while music is playing. Their density, shimmer, and color phase scale with high-band amplitude and flux, so small closed hats stay light while louder noisy hats become more visible.
 - On the EDC multi-segment ring fixture, each active segment is treated as the next physical ring. The effect asks WLED for the current segment ID and active segment count instead of hardcoding LED offsets, so varied ring counts and varied LEDs per ring can be tested by changing the segment layout.
 - Colors come from normal WLED color slots: primary drives kick/bass, secondary drives snare accents, and tertiary drives high sparkle/rumble accents. Selecting a palette adds subtle color progression across beats and rings.
 

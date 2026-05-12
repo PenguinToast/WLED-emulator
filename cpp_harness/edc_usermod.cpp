@@ -12,6 +12,7 @@ struct EdcPulse {
   uint8_t type;
   uint8_t strength;
   uint8_t colorIndex;
+  uint8_t shape;
 };
 
 struct EdcPulseState {
@@ -106,6 +107,18 @@ static uint8_t edcCappedAdaptValue(uint8_t average, uint8_t value, uint8_t allow
 
 static uint8_t edcAccentLevel(uint8_t value, uint8_t accentMix) {
   return edcDanceUsermod.accentLevel(edcScale8Video(value, uint8_t(56 + accentMix * 6U)));
+}
+
+static uint8_t edcSoundBalance(uint8_t low, uint8_t mid, uint8_t high) {
+  const uint16_t total = uint16_t(low) + mid + high;
+  if (total == 0) return 128;
+  return uint8_t(std::min<uint16_t>(255, (uint16_t(high) * 255U + mid * 96U) / total));
+}
+
+static uint8_t edcAccentShape(uint8_t energy, uint8_t flux, uint8_t floor, uint8_t balance) {
+  const uint8_t lift = energy > floor ? uint8_t(energy - floor) : 0;
+  const uint16_t shape = uint16_t(balance) / 2U + uint16_t(flux) * 3U + uint16_t(lift) * 2U;
+  return uint8_t(std::min<uint16_t>(255, shape));
 }
 
 static uint32_t edcAbsDiff32(uint32_t a, uint32_t b) {
@@ -210,13 +223,14 @@ static uint8_t edcPulseEnvelopeFloor(uint8_t type) {
   return 8;
 }
 
-static void edcSpawnPulse(EdcPulseState* state, uint8_t type, uint8_t strength, uint8_t colorIndex) {
+static void edcSpawnPulse(EdcPulseState* state, uint8_t type, uint8_t strength, uint8_t colorIndex, uint8_t shape = 0) {
   EdcPulse& pulse = state->pulses[state->cursor % 10];
   pulse.born = strip.now;
   pulse.tempoMs = state->kickInterval;
   pulse.type = type;
   pulse.strength = strength;
   pulse.colorIndex = colorIndex;
+  pulse.shape = shape;
   state->cursor = (state->cursor + 1) % 10;
 }
 
@@ -292,9 +306,24 @@ static void edcRenderSegmentPulse(const EdcPulse& pulse, uint32_t age, uint16_t 
   const uint8_t phase = uint8_t(strip.now / (pulse.type == 0 ? 12 : 6));
   const uint8_t slot = std::min<uint8_t>(2, pulse.type);
   for (uint16_t i = 0; i < len; i += 1) {
-    if (pulse.type == 2 && hash8(uint32_t(i) * 73U + pulse.born / 17U + uint32_t(segment) * 41U) > uint8_t(22 + pulse.strength / 8)) continue;
-    uint8_t shimmer = pulse.type == 0 ? 245 : sin8_t(uint8_t(i * (pulse.type == 1 ? 58 : 113) + phase));
-    if (pulse.type == 1 && ((i + segment + pulse.colorIndex) & 0x03) == 0) shimmer = 255;
+    if (pulse.type == 1) {
+      const uint8_t angle = uint8_t((uint32_t(i) * 255U) / std::max<uint16_t>(1, len - 1));
+      const uint8_t center = pulse.colorIndex + segment * 17U;
+      const uint8_t mirror = center + 128U;
+      const uint8_t distA = uint8_t(std::min<uint8_t>(uint8_t(angle - center), uint8_t(center - angle)));
+      const uint8_t distB = uint8_t(std::min<uint8_t>(uint8_t(angle - mirror), uint8_t(mirror - angle)));
+      const uint8_t arc = uint8_t(12 + pulse.strength / 16 + pulse.shape / 18);
+      const bool bodyArc = distA < arc || distB < arc;
+      const bool clapFill = pulse.shape > 118 && ((i + segment + pulse.colorIndex) % 3U) == 0;
+      const bool crackFill = pulse.shape > 188 && hash8(uint32_t(i) * 37U + pulse.born / 13U + segment * 29U) < uint8_t(30 + pulse.shape / 5);
+      if (!bodyArc && !clapFill && !crackFill) continue;
+    } else if (pulse.type == 2) {
+      const uint8_t density = uint8_t(std::min<uint16_t>(220, 26U + pulse.strength / 2U + pulse.shape / 3U));
+      if (hash8(uint32_t(i) * 73U + pulse.born / 17U + uint32_t(segment) * 41U) > density) continue;
+    }
+    uint8_t shimmer = pulse.type == 0 ? 245 : sin8_t(uint8_t(i * (pulse.type == 1 ? 58 : 113) + phase + pulse.shape / 2));
+    if (pulse.type == 1 && ((i + segment + pulse.colorIndex) & 0x03) == 0) shimmer = uint8_t(std::max<uint8_t>(shimmer, 204));
+    if (pulse.type == 2) shimmer = uint8_t(std::max<uint8_t>(shimmer, uint8_t(150 + pulse.shape / 3)));
     uint8_t value = edcScale8Video(brightness, shimmer);
     if (pulse.type == 0) value = std::max<uint8_t>(value, uint8_t(brightness * 3 / 5));
     const uint8_t colorIndex = pulse.colorIndex + segment * (pulse.type == 0 ? 11 : 19) + i * (pulse.type == 2 ? 7 : 1);
@@ -317,6 +346,13 @@ static void edcRenderStripPulse(const EdcPulse& pulse, uint32_t age, uint16_t le
     const uint16_t dist = i > half ? i - half : half - i;
     const uint16_t delta = radius > dist ? radius - dist : dist - radius;
     if (delta > width) continue;
+    if (pulse.type == 1) {
+      const uint8_t skip = pulse.shape > 170 ? 3 : 5;
+      if (((i + pulse.colorIndex) % skip) == 0 && pulse.strength < 190) continue;
+    } else if (pulse.type == 2) {
+      const uint8_t density = uint8_t(std::min<uint16_t>(220, 30U + pulse.strength / 2U + pulse.shape / 3U));
+      if (hash8(uint32_t(i) * 83U + pulse.born / 19U) > density) continue;
+    }
     const uint8_t edge = 255 - (delta * 255U) / width;
     const uint8_t value = edcScale8Video(edcScale8Video(pulse.strength, envelope), edge);
     if (value > 4) SEGMENT.addPixelColor(i, edcSlotColor(slot, pulse.colorIndex + i * 5, value));
@@ -435,11 +471,15 @@ uint16_t mode_edc_custom(void) {
   }
   if (snare && !kick) {
     state->lastSnare = strip.now;
-    edcSpawnPulse(state, 1, edcAccentLevel(edcHitStrength(snareEnergy, snareFlux, state->avgMid, 82, impact), accentMix), uint8_t(96 + state->beatStep * 17));
+    const uint8_t snareBalance = edcSoundBalance(low / 2, snareEnergy, high);
+    const uint8_t snareShape = edcAccentShape(snareEnergy, snareFlux, state->avgMid, snareBalance);
+    edcSpawnPulse(state, 1, edcAccentLevel(edcHitStrength(snareEnergy, snareFlux, state->avgMid, 82, impact), accentMix), uint8_t(96 + state->beatStep * 17 + snareShape / 7), snareShape);
   }
   if (hat) {
     state->lastHat = strip.now;
-    edcSpawnPulse(state, 2, edcAccentLevel(edcHitStrength(hatEnergy, hatFlux, state->avgHigh, 56, impact), accentMix), uint8_t(180 + state->beatStep * 13));
+    const uint8_t hatBalance = edcSoundBalance(0, mid / 2, hatEnergy);
+    const uint8_t hatShape = edcAccentShape(hatEnergy, hatFlux, state->avgHigh, hatBalance);
+    edcSpawnPulse(state, 2, edcAccentLevel(edcHitStrength(hatEnergy, hatFlux, state->avgHigh, 56, impact), accentMix), uint8_t(180 + state->beatStep * 13 + hatShape / 5), hatShape);
   }
 
   state->smoothKickEnergy = edcIir(state->smoothKickEnergy, kickEnergy, kickEnergy > state->smoothKickEnergy ? 3 : 3);
