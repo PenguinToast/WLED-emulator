@@ -4,7 +4,7 @@ The emulator's audio path is informed by WLED's embedded audio-reactive usermod 
 
 ## WLED Embedded Audio-Reactive
 
-Vendored WLED `v0.15.4` remains the parity target for custom effects. Its audio-reactive usermod exposes `volumeRaw`, `volumeSmth`, `samplePeak`, `fftResult[16]`, `FFT_MajorPeak`, and magnitude fields that upstream `FX.cpp` effects consume through `UsermodManager::getUMData()`.
+Vendored WLED v16 remains the parity target for custom effects. Its audio-reactive usermod exposes `volumeRaw`, `volumeSmth`, `samplePeak`, `fftResult[16]`, `FFT_MajorPeak`, and magnitude fields that upstream `FX.cpp` effects consume through `UsermodManager::getUMData()`.
 
 For microphone input, the emulator keeps WLED's fixed 16-bin GEQ shape:
 

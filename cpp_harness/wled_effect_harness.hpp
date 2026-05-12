@@ -45,11 +45,12 @@ using fract8 = uint8_t;
 #define FRAMETIME_FIXED (1000 / WLED_FPS)
 #define FRAMETIME strip.getFrameTime()
 #define NUM_COLORS 3
-#define FX_MODE_EDC_CUSTOM 187
+#define FX_MODE_EDC_CUSTOM 220
 #define SPEED_FORMULA_L (5U + (50U * (255U - SEGMENT.speed)) / std::max<uint16_t>(1, SEGLEN))
 #define M_TWOPI (2.0 * 3.14159265358979323846)
 #define NOBLEND 0
 #define LINEARBLEND 1
+#define LINEARBLEND_NOWRAP 2
 #define FAIR_DATA_PER_SEG 2048
 #define USERMOD_ID_AUDIOREACTIVE 42
 #ifndef PROGMEM
@@ -58,7 +59,7 @@ using fract8 = uint8_t;
 
 using std::max;
 using std::min;
-using mode_ptr = uint16_t (*)();
+using mode_ptr = void (*)();
 
 uint32_t millis();
 uint32_t micros();
@@ -70,6 +71,7 @@ struct CHSV {
   CHSV() = default;
   CHSV(uint8_t hue, uint8_t sat, uint8_t val) : h(hue), s(sat), v(val) {}
 };
+using CHSV32 = CHSV;
 
 struct CRGB {
   union {
@@ -197,10 +199,30 @@ struct CRGBPalette16 {
       );
     }
   }
+
+ public:
+  CRGB& operator[](size_t index) { return entries[index & 0x0f]; }
+  const CRGB& operator[](size_t index) const { return entries[index & 0x0f]; }
+  bool operator==(const CRGBPalette16& other) const { return entries == other.entries; }
+  bool operator!=(const CRGBPalette16& other) const { return !(*this == other); }
 };
 static_assert(sizeof(CRGBPalette16) == 16 * sizeof(CRGB), "CRGBPalette16 must match FastLED's 16 RGB entries");
 CRGBPalette16 currentSegmentPalette();
 #define SEGPALETTE currentSegmentPalette()
+
+struct CRGBW {
+  union {
+    struct { uint8_t b; uint8_t g; uint8_t r; uint8_t w; };
+    uint32_t color32;
+  };
+
+  CRGBW() : color32(0) {}
+  CRGBW(uint8_t red, uint8_t green, uint8_t blue, uint8_t white = 0) : color32(RGBW32(red, green, blue, white)) {}
+  CRGBW(uint32_t color) : color32(color) {}
+  CRGBW(const CRGB& color) : color32(RGBW32(color.r, color.g, color.b, 0)) {}
+  operator uint32_t() const { return color32; }
+  uint8_t getAverageLight() const { return (uint16_t(r) + g + b + w) / 4; }
+};
 
 inline void nblendPaletteTowardPalette(CRGBPalette16& current, const CRGBPalette16& target, uint8_t maxChanges) {
   uint8_t changes = 0;
@@ -292,6 +314,19 @@ inline uint32_t color_fade(uint32_t color, uint8_t brightness, bool = false) {
   );
 }
 
+inline void adjust_color(uint32_t& color, uint8_t valueScale, uint8_t, uint8_t) {
+  color = color_fade(color, valueScale, true);
+}
+
+inline void adjust_color(CRGBW& color, uint8_t valueScale, uint8_t hueShift, uint8_t satScale) {
+  uint32_t packed = color.color32;
+  adjust_color(packed, valueScale, hueShift, satScale);
+  color.color32 = packed;
+}
+
+inline uint32_t gamma32inv(uint32_t color) { return color; }
+inline uint8_t gamma8inv(uint8_t value) { return value; }
+
 inline uint8_t sin8_t(uint8_t theta) {
   return clamp8((std::sin(theta * 2.0f * 3.14159265f / 255.0f) + 1.0f) * 127.5f);
 }
@@ -302,6 +337,10 @@ inline uint8_t cos8_t(uint8_t theta) {
 
 inline uint8_t triwave8(uint8_t value) {
   return (value & 0x80) ? uint8_t((255 - value) * 2) : uint8_t(value * 2);
+}
+
+inline uint16_t triwave16(uint16_t value) {
+  return (value & 0x8000) ? uint16_t((0xffff - value) * 2U) : uint16_t(value * 2U);
 }
 
 inline uint8_t cubicwave8(uint8_t value) {
@@ -350,6 +389,9 @@ inline uint8_t inoise8(uint32_t x, uint32_t y = 0, uint32_t z = 0) {
 inline uint16_t inoise16(uint32_t x, uint32_t y = 0, uint32_t z = 0) {
   return (uint16_t(inoise8(x, y, z)) << 8) | inoise8(x + 17, y + 31, z + 47);
 }
+
+inline uint8_t perlin8(uint32_t x, uint32_t y = 0, uint32_t z = 0) { return inoise8(x, y, z); }
+inline uint16_t perlin16(uint32_t x, uint32_t y = 0, uint32_t z = 0) { return inoise16(x, y, z); }
 
 inline CRGB ColorFromPalette(const CRGBPalette16& palette, uint8_t index, uint8_t brightness = 255, uint8_t blendType = 0) {
   const uint8_t entry = index >> 4;
@@ -404,6 +446,29 @@ inline uint16_t random16(uint16_t minValue, uint16_t maxValue) {
   return minValue + random16(maxValue - minValue);
 }
 
+inline uint32_t hw_random(uint32_t maxValue = UINT32_MAX) {
+  hostPrng = hostPrng * 1664525u + 1013904223u;
+  return maxValue == UINT32_MAX ? hostPrng : (maxValue ? hostPrng % maxValue : 0);
+}
+
+inline uint16_t hw_random16(uint16_t maxValue = UINT16_MAX) {
+  return uint16_t(hw_random(maxValue));
+}
+
+inline uint16_t hw_random16(uint16_t minValue, uint16_t maxValue) {
+  if (maxValue <= minValue) return minValue;
+  return uint16_t(minValue + hw_random16(maxValue - minValue));
+}
+
+inline uint8_t hw_random8(uint8_t maxValue = UINT8_MAX) {
+  return uint8_t(hw_random(maxValue));
+}
+
+inline uint8_t hw_random8(uint8_t minValue, uint8_t maxValue) {
+  if (maxValue <= minValue) return minValue;
+  return uint8_t(minValue + hw_random8(maxValue - minValue));
+}
+
 inline uint16_t random16_get_seed() {
   return hostPrng & 0xffff;
 }
@@ -411,6 +476,22 @@ inline uint16_t random16_get_seed() {
 inline void random16_set_seed(uint16_t seed) {
   hostPrng = (hostPrng & 0xffff0000U) | seed;
 }
+
+class PRNG {
+ public:
+  explicit PRNG(uint32_t seed = 1) : seed_(seed ? seed : 1) {}
+  void setSeed(uint32_t seed) { seed_ = seed ? seed : 1; }
+  uint32_t getSeed() const { return seed_; }
+  uint32_t random(uint32_t maxValue = UINT32_MAX) {
+    seed_ = seed_ * 1664525u + 1013904223u;
+    return maxValue == UINT32_MAX ? seed_ : (maxValue ? seed_ % maxValue : 0);
+  }
+  uint16_t random16(uint16_t maxValue = UINT16_MAX) { return uint16_t(random(maxValue)); }
+  uint8_t random8(uint8_t maxValue = UINT8_MAX) { return uint8_t(random(maxValue)); }
+
+ private:
+  uint32_t seed_;
+};
 
 inline uint16_t beat88(uint16_t beatsPerMinute88, uint32_t timebase = 0) {
   const float bpm = beatsPerMinute88 / 256.0f;
@@ -524,6 +605,7 @@ struct EffectContext {
 class HostSegment {
  public:
   uint16_t start = 0;
+  uint16_t startY = 0;
   uint16_t stop = 133;
   uint16_t offset = 0;
   uint8_t speed = 128;
@@ -540,6 +622,7 @@ class HostSegment {
   bool check3 = false;
   bool reverse = false;
   uint8_t soundSim = 0;
+  uint8_t cct = 127;
   uint32_t step = 0;
   uint32_t call = 0;
   uint16_t aux0 = 0;
@@ -549,11 +632,15 @@ class HostSegment {
   uint16_t length() const { return stop > start ? stop - start : 0; }
   uint16_t width() const { return length(); }
   uint16_t height() const { return 1; }
+  uint16_t vLength() const { return length(); }
+  uint16_t vWidth() const { return length(); }
+  uint16_t vHeight() const { return 1; }
   uint16_t virtualLength() const { return length(); }
   uint16_t virtualWidth() const { return length(); }
   uint16_t virtualHeight() const { return 1; }
   uint16_t nrOfVStrips() const { return 1; }
   bool is2D() const { return false; }
+  bool isActive() const { return true; }
   uint32_t currentColor(uint8_t slot) const { return colors[slot % NUM_COLORS]; }
   bool allocateData(size_t len) {
     if (len == 0) return false;
@@ -596,6 +683,7 @@ class HostSegment {
   void blurCols(uint8_t amount, bool smear = false) { blur(amount, smear); }
   void move(uint8_t, uint8_t, bool = false) {}
   void drawCircle(uint16_t, uint16_t, uint8_t, uint32_t, bool = false) {}
+  void setDrawDimensions() {}
   void blendPixelColor(int n, uint32_t color, uint8_t blend) { setPixelColor(n, color_blend(getPixelColor(n), color, blend)); }
   void blendPixelColor(int n, CRGB color, uint8_t blend) { blendPixelColor(n, toRgbw(color), blend); }
   void addPixelColor(int n, uint32_t color, bool fast = false) { setPixelColor(n, color_add(getPixelColor(n), color, fast)); }
@@ -608,6 +696,7 @@ class HostSegment {
   std::vector<std::max_align_t> storage;
   size_t storageBytes = 0;
 };
+using Segment = HostSegment;
 
 static_assert(std::is_same_v<decltype(HostSegment::step), uint32_t>, "Segment step must match WLED segment_runtime.step");
 static_assert(std::is_same_v<decltype(HostSegment::call), uint32_t>, "Segment call must match WLED segment_runtime.call");
@@ -628,11 +717,16 @@ class HostStrip {
   bool isOffRefreshRequired() const { return false; }
   uint8_t getBrightness() const { return brightness; }
   uint8_t getActiveSegmentsNum() const { return _segments.size(); }
+  uint8_t getSegmentsNum() const { return _segments.size(); }
   uint8_t getCurrSegmentId() const { return currentSegment; }
   uint8_t getMaxSegments() const { return 32; }
   uint32_t segColor(uint8_t slot) const { return _segments[currentSegment].currentColor(slot); }
   void setPixelColor(unsigned i, uint32_t color);
   uint32_t getPixelColor(unsigned i) const;
+  uint32_t getPixelColorXY(unsigned x, unsigned) const { return getPixelColor(x); }
+  uint32_t getPixelColorNoMap(unsigned i) const { return getPixelColor(i); }
+  HostSegment& getSegment(uint8_t id) { return _segments[id % _segments.size()]; }
+  const HostSegment& getSegment(uint8_t id) const { return _segments[id % _segments.size()]; }
   uint16_t getLengthTotal() const;
   void fill(uint32_t color);
   void bind(std::vector<CRGB>* target) { leds = target; }
@@ -675,6 +769,8 @@ um_data_t* simulateSound(uint8_t simulationId);
 #define SEGMENT strip._segments[strip.getCurrSegmentId()]
 #define SEGENV SEGMENT
 #define SEGCOLOR(x) strip.segColor(x)
+#define SEG_W SEGMENT.virtualWidth()
+#define SEG_H SEGMENT.virtualHeight()
 #define SEGLEN strip._virtualSegmentLength
 
 void prepareWledFrame(EffectContext& ctx);

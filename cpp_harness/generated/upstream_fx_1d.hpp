@@ -3,7 +3,7 @@
 
 #include "wled_effect_harness.hpp"
 
-using UpstreamModePtr = uint16_t (*)();
+using UpstreamModePtr = void (*)();
 
 #ifndef FX_MODE_STATIC
 #define FX_MODE_STATIC 0
@@ -164,6 +164,9 @@ using UpstreamModePtr = uint16_t (*)();
 #ifndef FX_MODE_RUNNING_DUAL
 #define FX_MODE_RUNNING_DUAL 52
 #endif
+#ifndef FX_MODE_IMAGE
+#define FX_MODE_IMAGE 53
+#endif
 #ifndef FX_MODE_TRICOLOR_CHASE
 #define FX_MODE_TRICOLOR_CHASE 54
 #endif
@@ -233,8 +236,8 @@ using UpstreamModePtr = uint16_t (*)();
 #ifndef FX_MODE_METEOR
 #define FX_MODE_METEOR 76
 #endif
-#ifndef FX_MODE_METEOR_SMOOTH
-#define FX_MODE_METEOR_SMOOTH 77
+#ifndef FX_MODE_COPY
+#define FX_MODE_COPY 77
 #endif
 #ifndef FX_MODE_RAILWAY
 #define FX_MODE_RAILWAY 78
@@ -455,6 +458,9 @@ using UpstreamModePtr = uint16_t (*)();
 #ifndef FX_MODE_2DSQUAREDSWIRL
 #define FX_MODE_2DSQUAREDSWIRL 150
 #endif
+#ifndef FX_MODE_PACMAN
+#define FX_MODE_PACMAN 151
+#endif
 #ifndef FX_MODE_2DDNA
 #define FX_MODE_2DDNA 152
 #endif
@@ -481,6 +487,9 @@ using UpstreamModePtr = uint16_t (*)();
 #endif
 #ifndef FX_MODE_2DFUNKYPLANK
 #define FX_MODE_2DFUNKYPLANK 160
+#endif
+#ifndef FX_MODE_SHIMMER
+#define FX_MODE_SHIMMER 161
 #endif
 #ifndef FX_MODE_2DPULSER
 #define FX_MODE_2DPULSER 162
@@ -548,153 +557,259 @@ using UpstreamModePtr = uint16_t (*)();
 #ifndef FX_MODE_2DAKEMI
 #define FX_MODE_2DAKEMI 186
 #endif
+#ifndef FX_MODE_PARTICLEVOLCANO
+#define FX_MODE_PARTICLEVOLCANO 187
+#endif
+#ifndef FX_MODE_PARTICLEFIRE
+#define FX_MODE_PARTICLEFIRE 188
+#endif
+#ifndef FX_MODE_PARTICLEFIREWORKS
+#define FX_MODE_PARTICLEFIREWORKS 189
+#endif
+#ifndef FX_MODE_PARTICLEVORTEX
+#define FX_MODE_PARTICLEVORTEX 190
+#endif
+#ifndef FX_MODE_PARTICLEPERLIN
+#define FX_MODE_PARTICLEPERLIN 191
+#endif
+#ifndef FX_MODE_PARTICLEPIT
+#define FX_MODE_PARTICLEPIT 192
+#endif
+#ifndef FX_MODE_PARTICLEBOX
+#define FX_MODE_PARTICLEBOX 193
+#endif
+#ifndef FX_MODE_PARTICLEATTRACTOR
+#define FX_MODE_PARTICLEATTRACTOR 194
+#endif
+#ifndef FX_MODE_PARTICLEIMPACT
+#define FX_MODE_PARTICLEIMPACT 195
+#endif
+#ifndef FX_MODE_PARTICLEWATERFALL
+#define FX_MODE_PARTICLEWATERFALL 196
+#endif
+#ifndef FX_MODE_PARTICLESPRAY
+#define FX_MODE_PARTICLESPRAY 197
+#endif
+#ifndef FX_MODE_PARTICLESGEQ
+#define FX_MODE_PARTICLESGEQ 198
+#endif
+#ifndef FX_MODE_PARTICLECENTERGEQ
+#define FX_MODE_PARTICLECENTERGEQ 199
+#endif
+#ifndef FX_MODE_PARTICLEGHOSTRIDER
+#define FX_MODE_PARTICLEGHOSTRIDER 200
+#endif
+#ifndef FX_MODE_PARTICLEBLOBS
+#define FX_MODE_PARTICLEBLOBS 201
+#endif
+#ifndef FX_MODE_PSDRIP
+#define FX_MODE_PSDRIP 202
+#endif
+#ifndef FX_MODE_PSPINBALL
+#define FX_MODE_PSPINBALL 203
+#endif
+#ifndef FX_MODE_PSDANCINGSHADOWS
+#define FX_MODE_PSDANCINGSHADOWS 204
+#endif
+#ifndef FX_MODE_PSFIREWORKS1D
+#define FX_MODE_PSFIREWORKS1D 205
+#endif
+#ifndef FX_MODE_PSSPARKLER
+#define FX_MODE_PSSPARKLER 206
+#endif
+#ifndef FX_MODE_PSHOURGLASS
+#define FX_MODE_PSHOURGLASS 207
+#endif
+#ifndef FX_MODE_PS1DSPRAY
+#define FX_MODE_PS1DSPRAY 208
+#endif
+#ifndef FX_MODE_PSBALANCE
+#define FX_MODE_PSBALANCE 209
+#endif
+#ifndef FX_MODE_PSCHASE
+#define FX_MODE_PSCHASE 210
+#endif
+#ifndef FX_MODE_PSSTARBURST
+#define FX_MODE_PSSTARBURST 211
+#endif
+#ifndef FX_MODE_PS1DGEQ
+#define FX_MODE_PS1DGEQ 212
+#endif
+#ifndef FX_MODE_PSFIRE1D
+#define FX_MODE_PSFIRE1D 213
+#endif
+#ifndef FX_MODE_PS1DSONICSTREAM
+#define FX_MODE_PS1DSONICSTREAM 214
+#endif
+#ifndef FX_MODE_PS1DSONICBOOM
+#define FX_MODE_PS1DSONICBOOM 215
+#endif
+#ifndef FX_MODE_PS1DSPRINGY
+#define FX_MODE_PS1DSPRINGY 216
+#endif
+#ifndef FX_MODE_PARTICLEGALAXY
+#define FX_MODE_PARTICLEGALAXY 217
+#endif
+#ifndef FX_MODE_COLORCLOUDS
+#define FX_MODE_COLORCLOUDS 218
+#endif
+#ifndef FX_MODE_SLOW_TRANSITION
+#define FX_MODE_SLOW_TRANSITION 219
+#endif
 
-uint16_t mode_static(void);
-uint16_t mode_blink(void);
-uint16_t mode_breath(void);
-uint16_t mode_color_wipe(void);
-uint16_t mode_color_wipe_random(void);
-uint16_t mode_random_color(void);
-uint16_t mode_color_sweep(void);
-uint16_t mode_dynamic(void);
-uint16_t mode_rainbow(void);
-uint16_t mode_rainbow_cycle(void);
-uint16_t mode_scan(void);
-uint16_t mode_dual_scan(void);
-uint16_t mode_fade(void);
-uint16_t mode_theater_chase(void);
-uint16_t mode_theater_chase_rainbow(void);
-uint16_t mode_running_lights(void);
-uint16_t mode_saw(void);
-uint16_t mode_twinkle(void);
-uint16_t mode_dissolve(void);
-uint16_t mode_dissolve_random(void);
-uint16_t mode_sparkle(void);
-uint16_t mode_flash_sparkle(void);
-uint16_t mode_hyper_sparkle(void);
-uint16_t mode_strobe(void);
-uint16_t mode_strobe_rainbow(void);
-uint16_t mode_multi_strobe(void);
-uint16_t mode_blink_rainbow(void);
-uint16_t mode_android(void);
-uint16_t mode_chase_color(void);
-uint16_t mode_chase_random(void);
-uint16_t mode_chase_rainbow(void);
-uint16_t mode_chase_flash(void);
-uint16_t mode_chase_flash_random(void);
-uint16_t mode_chase_rainbow_white(void);
-uint16_t mode_colorful(void);
-uint16_t mode_traffic_light(void);
-uint16_t mode_color_sweep_random(void);
-uint16_t mode_running_color(void);
-uint16_t mode_aurora(void);
-uint16_t mode_running_random(void);
-uint16_t mode_larson_scanner(void);
-uint16_t mode_comet(void);
-uint16_t mode_fireworks(void);
-uint16_t mode_rain(void);
-uint16_t mode_tetrix(void);
-uint16_t mode_fire_flicker(void);
-uint16_t mode_gradient(void);
-uint16_t mode_loading(void);
-uint16_t mode_fairy(void);
-uint16_t mode_two_dots(void);
-uint16_t mode_fairytwinkle(void);
-uint16_t mode_running_dual(void);
-uint16_t mode_tricolor_chase(void);
-uint16_t mode_tricolor_wipe(void);
-uint16_t mode_tricolor_fade(void);
-uint16_t mode_lightning(void);
-uint16_t mode_icu(void);
-uint16_t mode_multi_comet(void);
-uint16_t mode_dual_larson_scanner(void);
-uint16_t mode_random_chase(void);
-uint16_t mode_oscillate(void);
-uint16_t mode_pride_2015(void);
-uint16_t mode_juggle(void);
-uint16_t mode_palette(void);
-uint16_t mode_fire_2012(void);
-uint16_t mode_colorwaves(void);
-uint16_t mode_bpm(void);
-uint16_t mode_fillnoise8(void);
-uint16_t mode_noise16_1(void);
-uint16_t mode_noise16_2(void);
-uint16_t mode_noise16_3(void);
-uint16_t mode_noise16_4(void);
-uint16_t mode_colortwinkle(void);
-uint16_t mode_lake(void);
-uint16_t mode_meteor(void);
-uint16_t mode_meteor_smooth(void);
-uint16_t mode_railway(void);
-uint16_t mode_ripple(void);
-uint16_t mode_twinklefox(void);
-uint16_t mode_twinklecat(void);
-uint16_t mode_halloween_eyes(void);
-uint16_t mode_static_pattern(void);
-uint16_t mode_tri_static_pattern(void);
-uint16_t mode_spots(void);
-uint16_t mode_spots_fade(void);
-uint16_t mode_glitter(void);
-uint16_t mode_candle(void);
-uint16_t mode_starburst(void);
-uint16_t mode_exploding_fireworks(void);
-uint16_t mode_bouncing_balls(void);
-uint16_t mode_sinelon(void);
-uint16_t mode_sinelon_dual(void);
-uint16_t mode_sinelon_rainbow(void);
-uint16_t mode_popcorn(void);
-uint16_t mode_drip(void);
-uint16_t mode_plasma(void);
-uint16_t mode_percent(void);
-uint16_t mode_ripple_rainbow(void);
-uint16_t mode_heartbeat(void);
-uint16_t mode_pacifica(void);
-uint16_t mode_candle_multi(void);
-uint16_t mode_solid_glitter(void);
-uint16_t mode_sunrise(void);
-uint16_t mode_phased(void);
-uint16_t mode_twinkleup(void);
-uint16_t mode_noisepal(void);
-uint16_t mode_sinewave(void);
-uint16_t mode_phased_noise(void);
-uint16_t mode_flow(void);
-uint16_t mode_chunchun(void);
-uint16_t mode_dancing_shadows(void);
-uint16_t mode_washing_machine(void);
-uint16_t mode_blends(void);
-uint16_t mode_tv_simulator(void);
-uint16_t mode_dynamic_smooth(void);
-uint16_t mode_pixels(void);
-uint16_t mode_pixelwave(void);
-uint16_t mode_juggles(void);
-uint16_t mode_matripix(void);
-uint16_t mode_gravimeter(void);
-uint16_t mode_plasmoid(void);
-uint16_t mode_puddles(void);
-uint16_t mode_midnoise(void);
-uint16_t mode_noisemeter(void);
-uint16_t mode_freqwave(void);
-uint16_t mode_freqmatrix(void);
-uint16_t mode_waterfall(void);
-uint16_t mode_freqpixels(void);
-uint16_t mode_noisefire(void);
-uint16_t mode_puddlepeak(void);
-uint16_t mode_noisemove(void);
-uint16_t mode_perlinmove(void);
-uint16_t mode_ripplepeak(void);
-uint16_t mode_freqmap(void);
-uint16_t mode_gravcenter(void);
-uint16_t mode_gravcentric(void);
-uint16_t mode_gravfreq(void);
-uint16_t mode_DJLight(void);
-uint16_t mode_blurz(void);
-uint16_t mode_FlowStripe(void);
-uint16_t mode_wavesins(void);
-uint16_t mode_rocktaves(void);
+void mode_static(void);
+void mode_copy_segment(void);
+void mode_blink(void);
+void mode_breath(void);
+void mode_color_wipe(void);
+void mode_color_wipe_random(void);
+void mode_random_color(void);
+void mode_color_sweep(void);
+void mode_dynamic(void);
+void mode_rainbow(void);
+void mode_rainbow_cycle(void);
+void mode_scan(void);
+void mode_dual_scan(void);
+void mode_fade(void);
+void mode_theater_chase(void);
+void mode_theater_chase_rainbow(void);
+void mode_running_lights(void);
+void mode_saw(void);
+void mode_twinkle(void);
+void mode_dissolve(void);
+void mode_dissolve_random(void);
+void mode_flash_sparkle(void);
+void mode_hyper_sparkle(void);
+void mode_strobe(void);
+void mode_strobe_rainbow(void);
+void mode_multi_strobe(void);
+void mode_blink_rainbow(void);
+void mode_android(void);
+void mode_chase_color(void);
+void mode_chase_random(void);
+void mode_chase_rainbow(void);
+void mode_chase_flash(void);
+void mode_chase_flash_random(void);
+void mode_chase_rainbow_white(void);
+void mode_colorful(void);
+void mode_traffic_light(void);
+void mode_color_sweep_random(void);
+void mode_running_color(void);
+void mode_aurora(void);
+void mode_ColorClouds(void);
+void mode_running_random(void);
+void mode_larson_scanner(void);
+void mode_rain(void);
+void mode_pride_2015(void);
+void mode_colorwaves(void);
+void mode_fireworks(void);
+void mode_tetrix(void);
+void mode_fire_flicker(void);
+void mode_gradient(void);
+void mode_loading(void);
+void mode_fairy(void);
+void mode_two_dots(void);
+void mode_fairytwinkle(void);
+void mode_running_dual(void);
+void mode_image(void);
+void mode_tricolor_chase(void);
+void mode_tricolor_wipe(void);
+void mode_tricolor_fade(void);
+void mode_lightning(void);
+void mode_icu(void);
+void mode_dual_larson_scanner(void);
+void mode_random_chase(void);
+void mode_oscillate(void);
+void mode_juggle(void);
+void mode_palette(void);
+void mode_bpm(void);
+void mode_fillnoise8(void);
+void mode_noise16_1(void);
+void mode_noise16_2(void);
+void mode_noise16_3(void);
+void mode_noise16_4(void);
+void mode_colortwinkle(void);
+void mode_lake(void);
+void mode_meteor(void);
+void mode_railway(void);
+void mode_ripple(void);
+void mode_twinklefox(void);
+void mode_twinklecat(void);
+void mode_halloween_eyes(void);
+void mode_static_pattern(void);
+void mode_tri_static_pattern(void);
+void mode_spots(void);
+void mode_spots_fade(void);
+void mode_comet(void);
+void mode_fire_2012(void);
+void mode_exploding_fireworks(void);
+void mode_sparkle(void);
+void mode_glitter(void);
+void mode_solid_glitter(void);
+void mode_multi_comet(void);
+void mode_rolling_balls(void);
+void mode_starburst(void);
+void mode_dancing_shadows(void);
+void mode_candle(void);
+void mode_bouncing_balls(void);
+void mode_popcorn(void);
+void mode_drip(void);
+void mode_sinelon(void);
+void mode_sinelon_dual(void);
+void mode_sinelon_rainbow(void);
+void mode_plasma(void);
+void mode_percent(void);
+void mode_ripple_rainbow(void);
+void mode_heartbeat(void);
+void mode_pacifica(void);
+void mode_candle_multi(void);
+void mode_sunrise(void);
+void mode_phased(void);
+void mode_twinkleup(void);
+void mode_noisepal(void);
+void mode_sinewave(void);
+void mode_phased_noise(void);
+void mode_flow(void);
+void mode_chunchun(void);
+void mode_washing_machine(void);
+void mode_blends(void);
+void mode_tv_simulator(void);
+void mode_dynamic_smooth(void);
+void mode_pacman(void);
+void mode_slow_transition(void);
+void mode_pixels(void);
+void mode_pixelwave(void);
+void mode_juggles(void);
+void mode_matripix(void);
+void mode_gravimeter(void);
+void mode_plasmoid(void);
+void mode_puddles(void);
+void mode_midnoise(void);
+void mode_noisemeter(void);
+void mode_freqwave(void);
+void mode_freqmatrix(void);
+void mode_waterfall(void);
+void mode_freqpixels(void);
+void mode_noisefire(void);
+void mode_puddlepeak(void);
+void mode_noisemove(void);
+void mode_perlinmove(void);
+void mode_ripplepeak(void);
+void mode_freqmap(void);
+void mode_gravcenter(void);
+void mode_gravcentric(void);
+void mode_gravfreq(void);
+void mode_DJLight(void);
+void mode_blurz(void);
+void mode_FlowStripe(void);
+void mode_wavesins(void);
+void mode_rocktaves(void);
+void mode_shimmer(void);
 
 inline UpstreamModePtr upstreamModeFor(uint8_t mode) {
   switch (mode) {
     case FX_MODE_STATIC: return &mode_static;
+    case FX_MODE_COPY: return &mode_copy_segment;
     case FX_MODE_BLINK: return &mode_blink;
     case FX_MODE_BREATH: return &mode_breath;
     case FX_MODE_COLOR_WIPE: return &mode_color_wipe;
@@ -714,7 +829,6 @@ inline UpstreamModePtr upstreamModeFor(uint8_t mode) {
     case FX_MODE_TWINKLE: return &mode_twinkle;
     case FX_MODE_DISSOLVE: return &mode_dissolve;
     case FX_MODE_DISSOLVE_RANDOM: return &mode_dissolve_random;
-    case FX_MODE_SPARKLE: return &mode_sparkle;
     case FX_MODE_FLASH_SPARKLE: return &mode_flash_sparkle;
     case FX_MODE_HYPER_SPARKLE: return &mode_hyper_sparkle;
     case FX_MODE_STROBE: return &mode_strobe;
@@ -733,11 +847,13 @@ inline UpstreamModePtr upstreamModeFor(uint8_t mode) {
     case FX_MODE_COLOR_SWEEP_RANDOM: return &mode_color_sweep_random;
     case FX_MODE_RUNNING_COLOR: return &mode_running_color;
     case FX_MODE_AURORA: return &mode_aurora;
+    case FX_MODE_COLORCLOUDS: return &mode_ColorClouds;
     case FX_MODE_RUNNING_RANDOM: return &mode_running_random;
     case FX_MODE_LARSON_SCANNER: return &mode_larson_scanner;
-    case FX_MODE_COMET: return &mode_comet;
-    case FX_MODE_FIREWORKS: return &mode_fireworks;
     case FX_MODE_RAIN: return &mode_rain;
+    case FX_MODE_PRIDE_2015: return &mode_pride_2015;
+    case FX_MODE_COLORWAVES: return &mode_colorwaves;
+    case FX_MODE_FIREWORKS: return &mode_fireworks;
     case FX_MODE_TETRIX: return &mode_tetrix;
     case FX_MODE_FIRE_FLICKER: return &mode_fire_flicker;
     case FX_MODE_GRADIENT: return &mode_gradient;
@@ -746,20 +862,17 @@ inline UpstreamModePtr upstreamModeFor(uint8_t mode) {
     case FX_MODE_TWO_DOTS: return &mode_two_dots;
     case FX_MODE_FAIRYTWINKLE: return &mode_fairytwinkle;
     case FX_MODE_RUNNING_DUAL: return &mode_running_dual;
+    case FX_MODE_IMAGE: return &mode_image;
     case FX_MODE_TRICOLOR_CHASE: return &mode_tricolor_chase;
     case FX_MODE_TRICOLOR_WIPE: return &mode_tricolor_wipe;
     case FX_MODE_TRICOLOR_FADE: return &mode_tricolor_fade;
     case FX_MODE_LIGHTNING: return &mode_lightning;
     case FX_MODE_ICU: return &mode_icu;
-    case FX_MODE_MULTI_COMET: return &mode_multi_comet;
     case FX_MODE_DUAL_LARSON_SCANNER: return &mode_dual_larson_scanner;
     case FX_MODE_RANDOM_CHASE: return &mode_random_chase;
     case FX_MODE_OSCILLATE: return &mode_oscillate;
-    case FX_MODE_PRIDE_2015: return &mode_pride_2015;
     case FX_MODE_JUGGLE: return &mode_juggle;
     case FX_MODE_PALETTE: return &mode_palette;
-    case FX_MODE_FIRE_2012: return &mode_fire_2012;
-    case FX_MODE_COLORWAVES: return &mode_colorwaves;
     case FX_MODE_BPM: return &mode_bpm;
     case FX_MODE_FILLNOISE8: return &mode_fillnoise8;
     case FX_MODE_NOISE16_1: return &mode_noise16_1;
@@ -769,7 +882,6 @@ inline UpstreamModePtr upstreamModeFor(uint8_t mode) {
     case FX_MODE_COLORTWINKLE: return &mode_colortwinkle;
     case FX_MODE_LAKE: return &mode_lake;
     case FX_MODE_METEOR: return &mode_meteor;
-    case FX_MODE_METEOR_SMOOTH: return &mode_meteor_smooth;
     case FX_MODE_RAILWAY: return &mode_railway;
     case FX_MODE_RIPPLE: return &mode_ripple;
     case FX_MODE_TWINKLEFOX: return &mode_twinklefox;
@@ -779,23 +891,29 @@ inline UpstreamModePtr upstreamModeFor(uint8_t mode) {
     case FX_MODE_TRI_STATIC_PATTERN: return &mode_tri_static_pattern;
     case FX_MODE_SPOTS: return &mode_spots;
     case FX_MODE_SPOTS_FADE: return &mode_spots_fade;
-    case FX_MODE_GLITTER: return &mode_glitter;
-    case FX_MODE_CANDLE: return &mode_candle;
-    case FX_MODE_STARBURST: return &mode_starburst;
+    case FX_MODE_COMET: return &mode_comet;
+    case FX_MODE_FIRE_2012: return &mode_fire_2012;
     case FX_MODE_EXPLODING_FIREWORKS: return &mode_exploding_fireworks;
+    case FX_MODE_SPARKLE: return &mode_sparkle;
+    case FX_MODE_GLITTER: return &mode_glitter;
+    case FX_MODE_SOLID_GLITTER: return &mode_solid_glitter;
+    case FX_MODE_MULTI_COMET: return &mode_multi_comet;
+    case FX_MODE_ROLLINGBALLS: return &mode_rolling_balls;
+    case FX_MODE_STARBURST: return &mode_starburst;
+    case FX_MODE_DANCING_SHADOWS: return &mode_dancing_shadows;
+    case FX_MODE_CANDLE: return &mode_candle;
     case FX_MODE_BOUNCINGBALLS: return &mode_bouncing_balls;
+    case FX_MODE_POPCORN: return &mode_popcorn;
+    case FX_MODE_DRIP: return &mode_drip;
     case FX_MODE_SINELON: return &mode_sinelon;
     case FX_MODE_SINELON_DUAL: return &mode_sinelon_dual;
     case FX_MODE_SINELON_RAINBOW: return &mode_sinelon_rainbow;
-    case FX_MODE_POPCORN: return &mode_popcorn;
-    case FX_MODE_DRIP: return &mode_drip;
     case FX_MODE_PLASMA: return &mode_plasma;
     case FX_MODE_PERCENT: return &mode_percent;
     case FX_MODE_RIPPLE_RAINBOW: return &mode_ripple_rainbow;
     case FX_MODE_HEARTBEAT: return &mode_heartbeat;
     case FX_MODE_PACIFICA: return &mode_pacifica;
     case FX_MODE_CANDLE_MULTI: return &mode_candle_multi;
-    case FX_MODE_SOLID_GLITTER: return &mode_solid_glitter;
     case FX_MODE_SUNRISE: return &mode_sunrise;
     case FX_MODE_PHASED: return &mode_phased;
     case FX_MODE_TWINKLEUP: return &mode_twinkleup;
@@ -804,11 +922,12 @@ inline UpstreamModePtr upstreamModeFor(uint8_t mode) {
     case FX_MODE_PHASEDNOISE: return &mode_phased_noise;
     case FX_MODE_FLOW: return &mode_flow;
     case FX_MODE_CHUNCHUN: return &mode_chunchun;
-    case FX_MODE_DANCING_SHADOWS: return &mode_dancing_shadows;
     case FX_MODE_WASHING_MACHINE: return &mode_washing_machine;
     case FX_MODE_BLENDS: return &mode_blends;
     case FX_MODE_TV_SIMULATOR: return &mode_tv_simulator;
     case FX_MODE_DYNAMIC_SMOOTH: return &mode_dynamic_smooth;
+    case FX_MODE_PACMAN: return &mode_pacman;
+    case FX_MODE_SLOW_TRANSITION: return &mode_slow_transition;
     case FX_MODE_PIXELS: return &mode_pixels;
     case FX_MODE_PIXELWAVE: return &mode_pixelwave;
     case FX_MODE_JUGGLES: return &mode_juggles;
@@ -836,6 +955,7 @@ inline UpstreamModePtr upstreamModeFor(uint8_t mode) {
     case FX_MODE_FLOWSTRIPE: return &mode_FlowStripe;
     case FX_MODE_WAVESINS: return &mode_wavesins;
     case FX_MODE_ROCKTAVES: return &mode_rocktaves;
+    case FX_MODE_SHIMMER: return &mode_shimmer;
     default: return nullptr;
   }
 }

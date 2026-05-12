@@ -5,7 +5,7 @@ import { edcUsermodConfigPath } from "./config.js";
 import { clampInt, clone } from "./util.js";
 
 export const EDC_USERMOD_NAME = "EDC Dance";
-export const EDC_USERMOD_EFFECT_ID = 187;
+export const EDC_USERMOD_EFFECT_ID = 220;
 export const EDC_USERMOD_EFFECT_DATA = "EDC Custom@Speed,Beat Focus,Tightness,Impact,Accent Mix;!,!,!;!;1vf;sx=192,ix=150,c1=190,c2=190,c3=18,pal=4,m12=2,si=0";
 
 export const edcUsermodEffectRegistration = {

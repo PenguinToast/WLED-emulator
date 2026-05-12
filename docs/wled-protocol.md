@@ -10,8 +10,8 @@ The active server exposes enough of the WLED HTTP JSON and WebSocket API for the
 - `GET|POST /json/si`: state and info payload.
 - `GET|POST /json/state`: state only.
 - `GET /json/info`: device info only.
-- `GET /json/effects` and `/json/eff`: effect names parsed from vendored WLED `v0.15.4`.
-- `GET /json/fxdata`: effect metadata strings parsed from vendored WLED `v0.15.4`.
+- `GET /json/effects` and `/json/eff`: effect names parsed from the WLED v16 `vendor/WLED` submodule.
+- `GET /json/fxdata`: effect metadata strings parsed from the WLED v16 `vendor/WLED` submodule.
 - `GET /json/palettes` and `/json/pal`: emulator palette names.
 - `GET /json/palx`: emulator palette RGB data.
 - `GET /json/live`: small WLED-style live preview payload.
@@ -43,7 +43,7 @@ Segment color updates are slot-aware. The WLED UI sends partial color arrays suc
 
 `info.leds.seglc` is exposed as WLED's per-segment light-capability bitfield, not segment length. The ring fixture reports RGB capability (`0x01`) for each segment; ring lengths live in `info.fixture` and `/api/emulator/state.fixture`.
 
-The effect list includes `EDC Custom` as a usermod-registered effect slot. The emulator assigns it ID `187`, matching the native harness' first available slot after the exposed WLED `v0.15.4` catalog, while the usermod registration metadata records that the real WLED request would be `strip.addEffect(255, ...)`.
+The effect list includes `EDC Custom` as a usermod-registered effect slot. The emulator assigns it ID `220`, matching the native harness' first available slot after the exposed WLED v16 catalog, while the usermod registration metadata records that the real WLED request would be `strip.addEffect(255, ...)`.
 
 ## Version Info
 

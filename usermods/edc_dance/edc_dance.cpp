@@ -1,14 +1,114 @@
-#include "edc_usermod.hpp"
-#include "generated/upstream_fx_1d.hpp"
+#include "wled.h"
 
-const char _data_FX_MODE_EDC_CUSTOM[] PROGMEM = "EDC Custom@Speed,Beat Focus,Tightness,Impact,Accent Mix;!,!,!;!;1vf;sx=192,ix=150,c1=190,c2=190,c3=18,pal=4,m12=2,si=0";
-EdcDanceUsermod edcDanceUsermod;
-uint8_t edcDebugPrimaryPulse = 0;
-uint8_t edcDebugSnarePulse = 0;
-uint8_t edcDebugHatPulse = 0;
-uint8_t edcDebugKickStrength = 0;
-uint16_t edcDebugKickInterval = 0;
-uint8_t edcDebugTempoConfidence = 0;
+#include <algorithm>
+
+#define USERMOD_ID_EDC_DANCE 900
+
+static void mode_edc_custom(void);
+
+static const char _data_FX_MODE_EDC_CUSTOM[] PROGMEM = "EDC Custom@Speed,Beat Focus,Tightness,Impact,Accent Mix;!,!,!;!;1vf;sx=192,ix=150,c1=190,c2=190,c3=18,pal=4,m12=2,si=0";
+
+enum class EdcDancePreset : uint8_t {
+  Auto = 0,
+  FourOnFloor = 1,
+  BassMusic = 2,
+  Trance = 3,
+};
+
+struct EdcDanceUsermodConfig {
+  bool enabled = true;
+  bool autoAdapt = true;
+  uint8_t preset = uint8_t(EdcDancePreset::Auto);
+  uint16_t segmentDelayMs = 22;
+  uint8_t outwardFade = 8;
+  uint8_t rumbleAmount = 42;
+  uint8_t accentAmount = 128;
+  uint16_t primaryMinGapMs = 118;
+};
+
+class EdcDanceUsermod : public Usermod {
+ public:
+  EdcDanceUsermodConfig config;
+
+  void setup() override {
+    if (effectId == 255) effectId = strip.addEffect(255, &mode_edc_custom, _data_FX_MODE_EDC_CUSTOM);
+  }
+
+  void loop() override {}
+
+  uint16_t getId() override { return USERMOD_ID_EDC_DANCE; }
+
+  void addToConfig(JsonObject& root) override {
+    JsonObject top = root.createNestedObject(F("EDC Dance"));
+    top[F("enabled")] = config.enabled;
+    top[F("autoAdapt")] = config.autoAdapt;
+    top[F("preset")] = config.preset;
+    top[F("segmentDelayMs")] = config.segmentDelayMs;
+    top[F("outwardFade")] = config.outwardFade;
+    top[F("rumbleAmount")] = config.rumbleAmount;
+    top[F("accentAmount")] = config.accentAmount;
+    top[F("primaryMinGapMs")] = config.primaryMinGapMs;
+  }
+
+  bool readFromConfig(JsonObject& root) override {
+    JsonObject top = root[F("EDC Dance")];
+    bool configComplete = !top.isNull();
+    configComplete &= getJsonValue(top[F("enabled")], config.enabled, true);
+    configComplete &= getJsonValue(top[F("autoAdapt")], config.autoAdapt, true);
+    configComplete &= getJsonValue(top[F("preset")], config.preset, uint8_t(EdcDancePreset::Auto));
+    configComplete &= getJsonValue(top[F("segmentDelayMs")], config.segmentDelayMs, uint16_t(22));
+    configComplete &= getJsonValue(top[F("outwardFade")], config.outwardFade, uint8_t(8));
+    configComplete &= getJsonValue(top[F("rumbleAmount")], config.rumbleAmount, uint8_t(42));
+    configComplete &= getJsonValue(top[F("accentAmount")], config.accentAmount, uint8_t(128));
+    configComplete &= getJsonValue(top[F("primaryMinGapMs")], config.primaryMinGapMs, uint16_t(118));
+
+    config.segmentDelayMs = std::max<uint16_t>(1, std::min<uint16_t>(120, config.segmentDelayMs));
+    config.outwardFade = std::min<uint8_t>(32, config.outwardFade);
+    config.rumbleAmount = std::min<uint8_t>(128, config.rumbleAmount);
+    config.accentAmount = std::max<uint8_t>(16, config.accentAmount);
+    config.primaryMinGapMs = std::max<uint16_t>(60, std::min<uint16_t>(300, config.primaryMinGapMs));
+    return configComplete;
+  }
+
+  void appendConfigData(Print& uiScript) override {
+    uiScript.print(F("addInfo('EDC Dance:segmentDelayMs',1,'Base ring-to-ring propagation delay.');"));
+    uiScript.print(F("addInfo('EDC Dance:primaryMinGapMs',1,'Minimum spacing for the dominant kick pulse.');"));
+  }
+
+  uint8_t segmentIndex() const { return strip.getCurrSegmentId(); }
+  uint8_t segmentCount() const { return std::max<uint8_t>(1, strip.getActiveSegmentsNum()); }
+  bool isSegmentFixture() const { return segmentCount() > 1; }
+  uint8_t segmentProgress255() const {
+    const uint8_t count = segmentCount();
+    if (count <= 1) return 0;
+    return uint8_t((uint16_t(segmentIndex()) * 255U) / uint16_t(count - 1));
+  }
+
+  uint16_t propagationDelayMs() const {
+    return std::max<uint16_t>(1, config.segmentDelayMs + (255 - SEGMENT.speed) / 10);
+  }
+
+  uint8_t outwardFadeFor(uint8_t pulseType) const {
+    const uint16_t scale = pulseType == 0 ? config.outwardFade : config.outwardFade + 5;
+    return std::min<uint8_t>(96, uint16_t(segmentIndex()) * scale);
+  }
+
+  uint8_t accentLevel(uint8_t value) const {
+    return uint8_t(std::min<uint16_t>(255, (uint16_t(value) * std::max<uint8_t>(16, config.accentAmount)) / 128U));
+  }
+
+ private:
+  uint8_t effectId = 255;
+};
+
+static EdcDanceUsermod edcDanceUsermod;
+REGISTER_USERMOD(edcDanceUsermod);
+static uint8_t edcDebugPrimaryPulse = 0;
+static uint8_t edcDebugSnarePulse = 0;
+static uint8_t edcDebugHatPulse = 0;
+static uint8_t edcDebugKickStrength = 0;
+static uint16_t edcDebugKickInterval = 0;
+static uint8_t edcDebugTempoConfidence = 0;
 
 static constexpr uint8_t EDC_AUTO_ADAPT_LEVEL = 178;
 static constexpr uint16_t EDC_MIN_PRIMARY_INTERVAL_MS = 320;
@@ -74,6 +174,7 @@ struct EdcAudioFrame {
   uint8_t snareEnergy;
   uint8_t hatEnergy;
   uint8_t lowRange;
+  bool samplePeak;
 };
 
 struct EdcOnsetFrame {
@@ -97,20 +198,22 @@ struct EdcKickDecision {
   uint32_t sinceKick;
 };
 
-EdcDanceUsermodConfig edcDefaultUsermodConfig() {
-  return EdcDanceUsermodConfig{};
-}
-
-void edcApplyUsermodConfig(const EdcDanceUsermodConfig& config) {
-  edcDanceUsermod.applyConfig(config);
-}
-
-static uint8_t edcMaxBin(uint8_t first, uint8_t last) {
+static uint8_t edcMaxBin(const uint8_t* fftResult, uint8_t first, uint8_t last) {
   uint8_t result = 0;
+  if (!fftResult) return result;
   for (uint8_t index = first; index <= last && index < 16; index += 1) {
     if (fftResult[index] > result) result = fftResult[index];
   }
   return result;
+}
+
+static uint8_t edcHash8(uint32_t value) {
+  value ^= value >> 16;
+  value *= 0x7feb352dU;
+  value ^= value >> 15;
+  value *= 0x846ca68bU;
+  value ^= value >> 16;
+  return uint8_t(value & 0xffU);
 }
 
 static uint8_t edcScale8Video(uint8_t value, uint8_t scale) {
@@ -431,11 +534,11 @@ static void edcRenderSegmentPulse(const EdcPulse& pulse, uint32_t age, uint16_t 
       const uint8_t arc = uint8_t(12 + pulse.strength / 16 + pulse.shape / 18);
       const bool bodyArc = distA < arc || distB < arc;
       const bool clapFill = pulse.shape > 118 && ((i + segment + pulse.colorIndex) % 3U) == 0;
-      const bool crackFill = pulse.shape > 188 && hash8(uint32_t(i) * 37U + pulse.born / 13U + segment * 29U) < uint8_t(30 + pulse.shape / 5);
+      const bool crackFill = pulse.shape > 188 && edcHash8(uint32_t(i) * 37U + pulse.born / 13U + segment * 29U) < uint8_t(30 + pulse.shape / 5);
       if (!bodyArc && !clapFill && !crackFill) continue;
     } else if (pulse.type == 2) {
       const uint8_t density = uint8_t(std::min<uint16_t>(220, 26U + pulse.strength / 2U + pulse.shape / 3U));
-      if (hash8(uint32_t(i) * 73U + pulse.born / 17U + uint32_t(segment) * 41U) > density) continue;
+      if (edcHash8(uint32_t(i) * 73U + pulse.born / 17U + uint32_t(segment) * 41U) > density) continue;
     }
     uint8_t shimmer = pulse.type == 0 ? 245 : sin8_t(uint8_t(i * (pulse.type == 1 ? 58 : 113) + phase + pulse.shape / 2));
     if (pulse.type == 1 && ((i + segment + pulse.colorIndex) & 0x03) == 0) shimmer = uint8_t(std::max<uint8_t>(shimmer, 204));
@@ -467,7 +570,7 @@ static void edcRenderStripPulse(const EdcPulse& pulse, uint32_t age, uint16_t le
       if (((i + pulse.colorIndex) % skip) == 0 && pulse.strength < 190) continue;
     } else if (pulse.type == 2) {
       const uint8_t density = uint8_t(std::min<uint16_t>(220, 30U + pulse.strength / 2U + pulse.shape / 3U));
-      if (hash8(uint32_t(i) * 83U + pulse.born / 19U) > density) continue;
+      if (edcHash8(uint32_t(i) * 83U + pulse.born / 19U) > density) continue;
     }
     const uint8_t edge = 255 - (delta * 255U) / width;
     const uint8_t value = edcScale8Video(edcScale8Video(pulse.strength, envelope), edge);
@@ -487,15 +590,26 @@ static EdcControls edcReadControls() {
 }
 
 static EdcAudioFrame edcReadAudioFrame(uint16_t len) {
-  const uint8_t low = edcMaxBin(0, 3);
-  const uint8_t mid = edcMaxBin(4, 10);
-  const uint8_t high = edcMaxBin(11, 15);
+  um_data_t* umData = nullptr;
+  uint8_t emptyFft[16] = {0};
+  const uint8_t* fftResult = emptyFft;
+  float volumeSmth = 0.0f;
+  bool samplePeak = false;
+  if (UsermodManager::getUMData(&umData, USERMOD_ID_AUDIOREACTIVE) && umData && umData->u_size >= 4) {
+    if (umData->u_data[0]) volumeSmth = *(float*)umData->u_data[0];
+    if (umData->u_data[2]) fftResult = (uint8_t*)umData->u_data[2];
+    if (umData->u_data[3]) samplePeak = *(uint8_t*)umData->u_data[3] != 0;
+  }
+
+  const uint8_t low = edcMaxBin(fftResult, 0, 3);
+  const uint8_t mid = edcMaxBin(fftResult, 4, 10);
+  const uint8_t high = edcMaxBin(fftResult, 11, 15);
   const uint8_t volume = uint8_t(std::min<float>(255.0f, std::max<float>(0.0f, volumeSmth)));
-  const uint8_t sub = edcMaxBin(0, 1);
-  const uint8_t punch = edcMaxBin(2, 5);
+  const uint8_t sub = edcMaxBin(fftResult, 0, 1);
+  const uint8_t punch = edcMaxBin(fftResult, 2, 5);
   const uint8_t kickEnergy = std::max<uint8_t>(edcScale8Video(sub, 238), edcScale8Video(edcBlend8(sub, punch, 86), 232));
-  const uint8_t snareEnergy = std::max<uint8_t>(mid, edcScale8Video(edcBlend8(edcMaxBin(5, 8), edcMaxBin(8, 11), 96), 224));
-  return EdcAudioFrame{len, low, mid, high, volume, kickEnergy, snareEnergy, high, 0};
+  const uint8_t snareEnergy = std::max<uint8_t>(mid, edcScale8Video(edcBlend8(edcMaxBin(fftResult, 5, 8), edcMaxBin(fftResult, 8, 11), 96), 224));
+  return EdcAudioFrame{len, low, mid, high, volume, kickEnergy, snareEnergy, high, 0, samplePeak};
 }
 
 static void edcInitializeState(EdcPulseState* state, const EdcAudioFrame& audio) {
@@ -559,7 +673,7 @@ static EdcKickDecision edcDecideKick(EdcPulseState* state, const EdcAudioFrame& 
   const uint8_t tempoMultiple = edcTempoWindowMultiple(state, sinceKick, kickCooldown);
   const bool nearTempo = tempoMultiple == 1;
   const bool missedTempo = tempoMultiple > 1;
-  const bool hintedKickFlux = (samplePeak || nearTempo)
+  const bool hintedKickFlux = (audio.samplePeak || nearTempo)
     && uint16_t(onset.kickFlux) * 5U >= uint16_t(onset.kickFluxFloor) * 3U
     && audio.kickEnergy > uint16_t(state->avgKickEnergy) + 5U;
   const bool tempoKickFlux = nearTempo
@@ -567,7 +681,7 @@ static EdcKickDecision edcDecideKick(EdcPulseState* state, const EdcAudioFrame& 
     && audio.kickEnergy > uint16_t(state->avgKickEnergy) + 3U;
   const bool denseDrop = audio.mid > uint16_t(state->avgMid) + 10U || audio.high > uint16_t(state->avgHigh) + 10U
     || (audio.mid > 86 && audio.high > 58);
-  const bool missedLowEvidence = samplePeak
+  const bool missedLowEvidence = audio.samplePeak
     || onset.kickFlux >= std::max<uint8_t>(2, onset.kickFluxFloor / 2)
     || audio.kickEnergy > uint16_t(state->avgKickEnergy) + 8U;
   const bool tempoRescueKick = (nearTempo || missedTempo)
@@ -575,7 +689,7 @@ static EdcKickDecision edcDecideKick(EdcPulseState* state, const EdcAudioFrame& 
     && state->beatStep >= 4
     && audio.kickEnergy > 24
     && audio.low > 18
-    && (nearTempo ? (samplePeak || onset.kickFlux > 0 || denseDrop) : missedLowEvidence)
+    && (nearTempo ? (audio.samplePeak || onset.kickFlux > 0 || denseDrop) : missedLowEvidence)
     && audio.kickEnergy + 10U >= state->avgKickEnergy;
   const bool kickDominant = uint16_t(audio.kickEnergy) * (214 - controls.beatFocus / 5 + controls.adaptLevel / 10) > uint16_t(audio.mid) * 128
     && uint16_t(audio.kickEnergy) * (198 - controls.beatFocus / 6 + controls.adaptLevel / 12) > uint16_t(audio.high) * 128;
@@ -696,7 +810,7 @@ static void edcRenderRumble(const EdcPulseState* state, const EdcAudioFrame& aud
   }
 }
 
-void mode_edc_custom(void) {
+static void mode_edc_custom(void) {
   if (SEGLEN == 0) return;
   if (!edcDanceUsermod.config.enabled) {
     SEGMENT.fadeToBlackBy(96);
@@ -704,7 +818,7 @@ void mode_edc_custom(void) {
   }
 
   if (!SEGENV.allocateData(sizeof(EdcPulseState))) {
-    mode_static();
+    SEGMENT.fill(SEGCOLOR(0));
     return;
   }
   EdcPulseState* state = reinterpret_cast<EdcPulseState*>(SEGENV.data);
@@ -725,4 +839,6 @@ void mode_edc_custom(void) {
   SEGMENT.fadeToBlackBy(uint8_t(58 + SEGMENT.custom1 / 8));
   edcRenderActivePulses(state, audio.len);
   edcRenderRumble(state, audio, kick);
+
+  return;
 }

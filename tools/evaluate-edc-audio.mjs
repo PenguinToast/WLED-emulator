@@ -317,7 +317,7 @@ function inputLine(frame, index) {
       start,
       ringStops[ring],
       255,
-      187,
+      220,
       args.speed,
       args.beatFocus,
       args.tightness,

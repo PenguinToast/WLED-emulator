@@ -14,7 +14,7 @@ The C++ harness is the current path for iterating on native custom effects witho
 - `cpp_harness/main.cpp`: stdin/stdout process wrapper that renders every active WLED segment once per frame.
 - `tools/run-cpp-effect.mjs`: compiles the harness, subscribes to emulator audio, polls WLED state, and streams RGB frames back to `/api/emulator/frames`.
 - `tools/benchmark-frame-pipeline.mjs`: measures raw C++ frame throughput and end-to-end WebSocket frame-stream throughput.
-- `tools/generate-upstream-fx.mjs`: regenerates the host-adapted upstream source and dispatch header from `vendor/wled-0.15.4/wled00/FX.cpp`.
+- `tools/generate-upstream-fx.mjs`: regenerates the host-adapted upstream source and dispatch header from `vendor/WLED/wled00/FX.cpp`.
 
 ## Run Loop
 
@@ -94,7 +94,7 @@ The audit checks the high-risk native compatibility contracts: WLED runtime fiel
 
 ## Upstream Effect Coverage
 
-The server exposes the official WLED `v0.15.4` effect catalog plus one usermod-registered slot, `EDC Custom` at ID `187`. The native renderer compiles and dispatches 142 official non-2D mode IDs from vendored `FX.cpp`, including the upstream WLED-SR 1D audio-reactive effects such as Pixels, Pixelwave, Juggles, Matripix, Gravimeter, Freqwave, Waterfall, Freqpixels, Noisefire, Noisemove, Ripple Peak, Freqmap, DJ Light, Blurz, and Rocktaves.
+The server exposes the official WLED v16 effect catalog plus one usermod-registered slot, `EDC Custom` at ID `220`. The native renderer compiles and dispatches official non-2D, non-particle mode IDs from vendored `FX.cpp`, including the upstream WLED-SR 1D audio-reactive effects such as Pixels, Pixelwave, Juggles, Matripix, Gravimeter, Freqwave, Waterfall, Freqpixels, Noisefire, Noisemove, Ripple Peak, Freqmap, DJ Light, Blurz, and Rocktaves.
 
 The JSON effect catalog is derived from the generated native dispatch table. Unsupported official slots stay in the array as `RSVD` so WLED mode IDs remain stable, but the WLED UI/app does not offer matrix-only effects that the host shim cannot render.
 
@@ -111,6 +111,6 @@ The host shim implements `UsermodManager::getUMData()` for `USERMOD_ID_AUDIOREAC
 - `u_data[6]` and `u_data[7]`: mutable `maxVol` and `binNum` controls used by several SR effects
 - `u_data[8]`: float FFT bin array, `fftBin`, derived from the normalized `fftResult` bins
 
-Modes that require WLED's 2D matrix renderer are still intentionally skipped in the generated dispatch until the host fixture grows matrix geometry.
+Modes that require WLED's 2D matrix renderer or particle-system engine are still intentionally skipped in the generated dispatch until the host fixture grows those compatibility surfaces.
 
-`EDC Custom` remains written as a WLED-style `uint16_t mode_edc_custom(void)` function, but its ownership is now the `EDC Dance` usermod. The host `strip.addEffect()` shim assigns the same slot that the TypeScript catalog exposes, so iteration follows the real WLED usermod registration pattern.
+`EDC Custom` is written as a WLED v16-style `void mode_edc_custom(void)` function, and its ownership is the `EDC Dance` usermod. The host `strip.addEffect()` shim assigns the same slot that the TypeScript catalog exposes, so iteration follows the real WLED usermod registration pattern.

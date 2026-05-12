@@ -2,7 +2,7 @@
 
 #include "wled_effect_harness.hpp"
 
-#define USERMOD_ID_EDC_DANCE 55
+#define USERMOD_ID_EDC_DANCE 900
 
 extern const char _data_FX_MODE_EDC_CUSTOM[] PROGMEM;
 extern uint8_t edcDebugPrimaryPulse;
@@ -30,7 +30,7 @@ struct EdcDanceUsermodConfig {
   uint16_t primaryMinGapMs = 118;
 };
 
-uint16_t mode_edc_custom(void);
+void mode_edc_custom(void);
 
 class EdcDanceUsermod {
  public:

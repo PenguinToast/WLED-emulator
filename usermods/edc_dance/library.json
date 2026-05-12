@@ -1,0 +1,9 @@
+{
+  "name": "edc_dance",
+  "version": "0.1.0",
+  "description": "Beat-focused EDC custom effect usermod for WLED.",
+  "build": {
+    "libArchive": false
+  },
+  "dependencies": {}
+}

@@ -4,8 +4,8 @@ import { join } from "node:path";
 import { rootDir, vendorWledDir } from "./config.js";
 import { edcUsermodEffectRegistration } from "./edc-usermod.js";
 
-const OFFICIAL_EFFECT_SLOTS = 187;
-export const HOST_CUSTOM_EFFECT_ID = 187;
+const OFFICIAL_EFFECT_SLOTS = 220;
+export const HOST_CUSTOM_EFFECT_ID = 220;
 const nativeEffectManifestPath = join(rootDir, "cpp_harness/generated/upstream_fx_1d_modes.json");
 
 export function loadOfficialWledEffects() {

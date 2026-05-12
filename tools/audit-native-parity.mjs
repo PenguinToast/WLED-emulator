@@ -43,7 +43,7 @@ function expect(label, ok) {
 }
 
 function effectBody(functionName) {
-  const startMatch = new RegExp(`uint16_t\\s+${functionName}\\s*\\([^)]*\\)\\s*\\{`, "g").exec(generated);
+  const startMatch = new RegExp(`void\\s+${functionName}\\s*\\([^)]*\\)\\s*\\{`, "g").exec(generated);
   if (!startMatch) return null;
   let depth = 1;
   let cursor = startMatch.index + startMatch[0].length;

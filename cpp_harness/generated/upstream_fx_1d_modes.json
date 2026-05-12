@@ -1,9 +1,9 @@
 {
-  "generatedFrom": "vendor/wled-0.15.4/wled00/FX.cpp",
+  "generatedFrom": "vendor/WLED/wled00/FX.cpp",
   "excludes": [
     "2D/matrix modes"
   ],
-  "modeCount": 142,
+  "modeCount": 148,
   "modes": [
     {
       "id": 0,
@@ -246,6 +246,11 @@
       "function": "mode_loading"
     },
     {
+      "id": 48,
+      "name": "FX_MODE_ROLLINGBALLS",
+      "function": "mode_rolling_balls"
+    },
+    {
       "id": 49,
       "name": "FX_MODE_FAIRY",
       "function": "mode_fairy"
@@ -264,6 +269,11 @@
       "id": 52,
       "name": "FX_MODE_RUNNING_DUAL",
       "function": "mode_running_dual"
+    },
+    {
+      "id": 53,
+      "name": "FX_MODE_IMAGE",
+      "function": "mode_image"
     },
     {
       "id": 54,
@@ -382,8 +392,8 @@
     },
     {
       "id": 77,
-      "name": "FX_MODE_METEOR_SMOOTH",
-      "function": "mode_meteor_smooth"
+      "name": "FX_MODE_COPY",
+      "function": "mode_copy_segment"
     },
     {
       "id": 78,
@@ -671,6 +681,11 @@
       "function": "mode_ripplepeak"
     },
     {
+      "id": 151,
+      "name": "FX_MODE_PACMAN",
+      "function": "mode_pacman"
+    },
+    {
       "id": 155,
       "name": "FX_MODE_FREQMAP",
       "function": "mode_freqmap"
@@ -696,6 +711,11 @@
       "function": "mode_DJLight"
     },
     {
+      "id": 161,
+      "name": "FX_MODE_SHIMMER",
+      "function": "mode_shimmer"
+    },
+    {
       "id": 163,
       "name": "FX_MODE_BLURZ",
       "function": "mode_blurz"
@@ -714,6 +734,16 @@
       "id": 185,
       "name": "FX_MODE_ROCKTAVES",
       "function": "mode_rocktaves"
+    },
+    {
+      "id": 218,
+      "name": "FX_MODE_COLORCLOUDS",
+      "function": "mode_ColorClouds"
+    },
+    {
+      "id": 219,
+      "name": "FX_MODE_SLOW_TRANSITION",
+      "function": "mode_slow_transition"
     }
   ]
 }

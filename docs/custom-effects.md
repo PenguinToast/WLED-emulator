@@ -5,16 +5,15 @@ The EDC effect is modeled as a WLED v2 usermod that registers a WLED-style effec
 The effect body still has the normal `FX.cpp` shape:
 
 ```cpp
-uint16_t mode_edc_custom(void) {
+void mode_edc_custom(void) {
   SEGMENT.fadeToBlackBy(38);
   for (uint16_t i = 0; i < SEGLEN; i += 1) {
     SEGMENT.setPixelColor(i, SEGMENT.color_from_palette(i, true, true, 0));
   }
-  return FRAMETIME;
 }
 ```
 
-This is intentionally close to functions in WLED `FX.cpp`: no `EffectContext` parameter, segment access through `SEGMENT`, timing through `strip.now`, colors through `SEGCOLOR()`, and frame cadence through `FRAMETIME`.
+This is intentionally close to functions in WLED v16 `FX.cpp`: no `EffectContext` parameter, segment access through `SEGMENT`, timing through `strip.now`, colors through `SEGCOLOR()`, and frame cadence controlled by WLED's frame loop.
 
 ## Local Harness Surface
 
@@ -38,9 +37,9 @@ Audio-reactive compatibility globals are also populated from the browser audio a
 
 ## Active Usermod Mode
 
-The `EDC Dance` usermod registers one effect after the official WLED `v0.15.4` catalog:
+The `EDC Dance` usermod registers one effect after the official WLED v16 catalog:
 
-- ID `187`: `EDC Custom`
+- ID `220`: `EDC Custom`
 
 Select `EDC Custom` in the real WLED UI, run `npm run cpp:run`, and the browser emulator will display frames rendered by `mode_edc_custom()` in `cpp_harness/edc_usermod.cpp`.
 

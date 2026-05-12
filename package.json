@@ -11,7 +11,10 @@
     "audit:native": "node tools/audit-native-parity.mjs",
     "audio:download": "node tools/download-audio-artifacts.mjs",
     "cpp:generate": "node tools/generate-upstream-fx.mjs",
-    "cpp:run": "node tools/run-cpp-effect.mjs"
+    "cpp:run": "node tools/run-cpp-effect.mjs",
+    "firmware:prepare": "node tools/wled-firmware.mjs prepare",
+    "firmware:build": "node tools/wled-firmware.mjs build",
+    "firmware:flash": "node tools/wled-firmware.mjs upload"
   },
   "devDependencies": {
     "@types/node": "^25.6.2",
